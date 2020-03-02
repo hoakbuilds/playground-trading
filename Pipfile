@@ -1,0 +1,22 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pylint = "*"
+
+[packages]
+requests = "*"
+ta-lib = "*"
+numpy = "*"
+pandas = "*"
+setuptools = "*"
+e1839a8 = {editable = true,path = "."}
+playground = {editable = true,path = "."}
+tweepy = "*"
+flask = "*"
+python-dateutil = "*"
+
+[requires]
+python_version = "3.6"
