@@ -8,7 +8,9 @@ __email__ = "murlux@protonmail.com"
 import logging
 from typing import List, Dict, Any
 from playground.enums import *
+from playground.util import setup_logger
 
+logger = setup_logger(name=__name__)
 
 class Currency:
     """
@@ -45,12 +47,16 @@ class MarketPair:
     # This is the quote currency of the pair, e.g in BTC/USD it would be USD
     quote_currency: Currency = None
 
+    _api_key: str = None
+
     def __init__(self, config: Dict[str, Any]) -> None:
         # TODO exchange class
         self.exchange = config.get('exchange', '')
-
+        self._api_key = config.get('apikey', None)
         self.base_currency = Currency(config = config.get('base_currency', None))
         self.quote_currency = Currency(config = config.get('quote_currency', None))
+
+        logger.info('Pair {}{} with exclusive CCAPI_KEY:: {}'.format(self.base_currency, self.quote_currency, self._api_key))
 
     def __str__(self) -> str:
         """String representation."""

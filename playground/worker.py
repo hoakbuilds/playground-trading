@@ -32,7 +32,8 @@ class Worker:
     # TODO: pls yesnt
     #strategies: Strategy
 
-    __throttle: int = 15
+    __throttle: int = 30
+    __startup_throttle: int = 2
 
     def __init__(self):
         """
@@ -41,13 +42,17 @@ class Worker:
         self.logger = setup_logger(name=__name__)
         self.logger.info('Initializing %s module.', __name__)
 
-        self.wallet = Wallet()
-
         self.wh = Warehouse()
 
-        self.api_srv = ApiServer(self)
-
+        self.logger.info('Parsing strategies..')
         self.parse_strategies()
+
+        self.wallet = Wallet()
+
+        self.logger.info('Setting up notifiers...')
+
+        # last thing to be up
+        self.api_srv = ApiServer(self)
 
     def parse_strategies(self):
         """
@@ -66,8 +71,20 @@ class Worker:
                 if settings.WORKER_VERBOSITY:
                     self.logger.info(
                         '%s - %s - O: %d - H: %d - L: %d - C: %d - V: %d ', \
-                            pair, tf, candle.open[0], candle.high[0], candle.low[0], candle.close[0], candle.volumeto[0]
+                            pair, tf, candle.open[0], candle.high[0], candle.low[0], candle.close[0], candle.volumeto[0] # noqa
                         )
+
+    def print_status(self):
+        """
+        Show the worker status, this includes wallet balances, positions, etc.
+        """
+
+        balances = self.wallet.get_balances()
+
+        for balance in balances:
+            self.logger.info(
+                '%s balance: %.2g | xbt : %.8g', balance.get('ticker'), balance.get('value'), balance.get('xbt_value'),
+            )
 
     def run(self):
         """
@@ -86,16 +103,18 @@ class Worker:
 
             self.logger.info('Analyzing..')
 
+            #self.print_status()
+
             time.sleep(self.__throttle)          
 
 
     def _wait_warehouse(self):
 
         while not self.wh.is_ready(): 
-            time.sleep(15)
+            time.sleep(self.__startup_throttle)
             self.logger.info('Waiting for the warehouse to be ready..')
 
         while not self.wh.is_updated():
-            time.sleep(15)
+            time.sleep(self.__startup_throttle)
             self.logger.info('Waiting for the warehouse to be updated..')
 

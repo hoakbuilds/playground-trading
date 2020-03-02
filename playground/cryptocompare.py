@@ -39,27 +39,43 @@ class CryptoCompareAPI:
         else:
             self.logger = logger
 
+        _api_key: str = config.get('apikey', None)
         self.comparison_symbol = config.get('comparison_symbol', 'USD')
         self.exchange = config.get('exchange', None)
         self._verbose = verbose
 
-        if s.CCAPI_KEY:
+        if _api_key:
+            self._header = {
+                'Authorization': 'Apikey ' + _api_key,
+            }
+        elif s.CCAPI_KEY:
             self._header = {
                 'Authorization': 'Apikey ' + s.CCAPI_KEY,
             }
 
-        self.logger.info('Initializing CryptoCompareAPI module.')
+        if self._verbose:
+            self.logger.info('Initializing CryptoCompareAPI module with key {}.'.format(_api_key))
 
 
-    def price(self, symbol: str):
+    def price(self, symbol: str, tsyms: list = None):
         """
         Fetch the price of a certain currency by `symbol`, using a certain
         """
-        url = 'https://min-api.cryptocompare.com/data/price?fsym={}&tsym={}'\
-                .format(symbol.upper(), ','.join(self.comparison_symbol).upper())
+        url = 'https://min-api.cryptocompare.com/data/price?fsym={}'\
+                .format(symbol.upper())
+        if tsyms:
+            url += '&tsyms='
+            for i, item in enumerate(tsyms):
+                if i == len(tsyms):
+                    url += '{}'.format(item)
+                else:
+                    url += '{},'.format(item)
 
         if self.exchange:
             url += '&e={}'.format(exchange)
+
+        if self._verbose:
+            self.logger.info('Requesting CryptoCompare:: {} ::'.format(url))
 
         if self._header:
             page = requests.get(url, headers=self._header)
@@ -78,6 +94,9 @@ class CryptoCompareAPI:
             page = requests.get(url, headers=self._header)
         else:
             page = requests.get(url)
+
+        if self._verbose:
+            self.logger.info('Requesting CryptoCompare:: {} ::'.format(url))
 
         data = page.json()['Data']
         df = pd.DataFrame(data)

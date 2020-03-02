@@ -47,9 +47,9 @@ class Warehouse:
 
     __throttle: int = 5
 
-    __rate_throttle: int = 2
+    __rate_throttle: int = 1
 
-    def __init__(self,):
+    def __init__(self,) -> None:
         """
         Initialize the Warehouse object with the settings.
         """
@@ -71,8 +71,8 @@ class Warehouse:
         if len(self.outdated_sets) == 0:
             self.logger.info('Warehouse ready and updated.')
             self.set_updated()
-        
-        self.update_datasets()
+        else:
+            self.update_datasets()
 
     def get_latest_candle(self, pair: MarketPair = None, timeframe: str = '') -> pd.DataFrame:
         """
@@ -88,7 +88,7 @@ class Warehouse:
 
         return _dataset
 
-    def update_datasets(self):
+    def update_datasets(self) -> None:
         if not self.is_updated():
             helpers: list = []
 
@@ -101,7 +101,7 @@ class Warehouse:
                         item.get('pair'), item.get('timeframe').replace(' ', '')
                         )
                     )
-                time.sleep(0.25)
+                time.sleep(0.1)
 
             for helper in helpers:
                 helper.join()
@@ -111,23 +111,22 @@ class Warehouse:
             self.outdated_sets = []
             self.set_updated()
 
-            time.sleep(self.__throttle)
-
-    def _keep_updated(self):
+    def _keep_updated(self) -> None:
         
         self.logger.info('Keeping Warehouse updated...')
 
         self.outdated_sets = self._check_outdated_datasets()
 
         if len(self.outdated_sets) == 0:
-            self.logger.info('Warehouse ready and updated.')
+            self.logger.info('Warehouse remains updated.')
             self.set_updated()
         else:
             self.logger.info('Datasets outdated: {}'.format(self.outdated_sets))
             self.set_updating()
             self.update_datasets()
+            self.logger.info('Warehouse successfully updated.')
 
-    def _update_dataset(self, config: Dict[str, Any]):
+    def _update_dataset(self, config: Dict[str, Any]) -> None:
         """
         This function is used by the Warehouse to update the disk datasets with the newest data.
         The behavior of this method is designed this way because it is intended for both threaded and unthreaded use.
@@ -136,11 +135,11 @@ class Warehouse:
         if self._extra_verbose:
             self.logger.info('Updating dataset %s %s.', config.get('pair'), config.get('timeframe').replace(' ', ''))
 
-        if not self._cc:
-            cc_config = {
-                'comparison_symbol': str(config.get('pair').quote_currency)
-            }
-            self._cc = CryptoCompareAPI(config=cc_config, logger=self.logger, verbose=self._extra_verbose)
+        cc_config = {
+            'comparison_symbol': str(config.get('pair').quote_currency),
+            'apikey': str(config.get('pair')._api_key),
+        }
+        self._cc = CryptoCompareAPI(config=cc_config, logger=self.logger, verbose=self._extra_verbose)
 
         api_call: Callable = None
         api_args: dict = None
@@ -187,11 +186,11 @@ class Warehouse:
         if self._extra_verbose:
             self.logger.info('Building dataset for %s with interval %s.', config['pair'], config['timeframe'])
 
-        if not self._cc:
-            cc_config = {
-                'comparison_symbol': str(config.get('pair').quote_currency)
-            }
-            self._cc = CryptoCompareAPI(config=cc_config, logger=self.logger, verbose=self._extra_verbose)
+        cc_config = {
+            'comparison_symbol': str(config.get('pair').quote_currency),
+            'apikey': str(config.get('pair')._api_key),
+        }
+        self._cc = CryptoCompareAPI(config=cc_config, logger=self.logger, verbose=self._extra_verbose)
 
         initial_data: dict = None
         data: dict = None
@@ -263,7 +262,7 @@ class Warehouse:
 
         return Analyzer.analyze(config, df=dataset)
 
-    def _build_missing_datasets(self):
+    def _build_missing_datasets(self) -> None:
         """
         This function is used by the Warehouse to build the missing datasets with data going as far as it can get.
         """
@@ -291,7 +290,7 @@ class Warehouse:
 
         return self.set_ready()
 
-    def _check_outdated_datasets(self):
+    def _check_outdated_datasets(self) -> list:
         """
         This function is used by the Warehouse to check for outdated datasets.
         It will run inside the warehouse loop.
@@ -303,6 +302,7 @@ class Warehouse:
                 candle = self.get_latest_candle(pair=pair, timeframe=tf)
                 candle_time = dt.fromtimestamp(candle.time)
                 current_time = dt.now()
+
                 if self._extra_verbose:
                     self.logger.info('{} - Candle Time: {}'.format(str(str(pair)+' '+tf), candle_time))
 
@@ -324,7 +324,7 @@ class Warehouse:
 
         return outdated_pair_tf
 
-    def _check_missing_datasets(self):
+    def _check_missing_datasets(self) -> list:
 
         missing_pair_tf: list = []
 
@@ -341,15 +341,15 @@ class Warehouse:
                     })
 
         self.logger.info('Datasets missing: {}'.format(missing_pair_tf))
-        
+
         return missing_pair_tf
         
-    def _parse_settings(self,):
+    def _parse_settings(self,) -> None:
 
         self._verbose = s.WAREHOUSE_VERBOSITY
         self._extra_verbose = s.WAREHOUSE_EXTRA_VERBOSITY
 
-    def _parse_running_pairs(self):
+    def _parse_running_pairs(self) -> None:
 
         self.logger.info('Configuring module.')
 
@@ -384,22 +384,22 @@ class Warehouse:
             return dataset
         return None
 
-    def set_ready(self,):
+    def set_ready(self,) -> None:
         """Used by the DataProvider to mark the warehouse as ready."""
         self.ready = True
 
-    def is_ready(self,):
+    def is_ready(self,) -> bool:
         """Used by the bot to check if the warehouse is updated."""
         return self.ready
 
-    def set_updating(self,):
+    def set_updating(self,) -> None:
         """Used by the DataProvider to mark the warehouse as being updated."""
         self.updated = False
 
-    def set_updated(self,):
+    def set_updated(self,) -> None:
         """Used by the DataProvider to mark the warehouse as updated."""
         self.updated = True
 
-    def is_updated(self,):
+    def is_updated(self,) -> bool:
         """Used by the bot to check if the warehouse is updated."""
         return self.updated

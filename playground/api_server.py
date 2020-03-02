@@ -20,12 +20,16 @@ BASE_URI = '/api/v1'
 class ApiServer:
     """Basic api server for REST calls."""
 
+    _worker = None
     def __init__(self, worker) -> None:
         """
         Init the api server, and init the super class RPC
         """
         self.logger = setup_logger(name=__name__)
         self.app = Flask(__name__)
+
+        if worker:
+            self._worker = worker
 
         # Register application handling
         self.register_rest_rpc_urls()
@@ -80,6 +84,8 @@ class ApiServer:
         # testing
         self.app.add_url_rule(f'{BASE_URI}/ping', 'ping',
                               view_func=self._ping, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/wallet_balances', 'balances',
+                              view_func=self._balances, methods=['GET'])
         # Actions to control the bot
         self.app.add_url_rule(f'{BASE_URI}/start', 'start',
                               view_func=self._start, methods=['POST'])
@@ -123,6 +129,13 @@ class ApiServer:
         """
         msg = self._rpc_stopbuy()
         return self.rest_dump(msg)
+
+    def _balances(self):
+        """
+        simple poing version
+        """
+        _balances: list = self._worker.wallet.get_balances()
+        return self.rest_dump({"balances": _balances})
 
     def _ping(self):
         """
