@@ -55,8 +55,8 @@ class MarketPair:
         self._api_key = config.get('apikey', None)
         self.base_currency = Currency(config = config.get('base_currency', None))
         self.quote_currency = Currency(config = config.get('quote_currency', None))
-
-        logger.info('Pair {}{} with exclusive CCAPI_KEY:: {}'.format(self.base_currency, self.quote_currency, self._api_key))
+        if self._api_key:
+            logger.info('Pair {}{} with exclusive CCAPI_KEY:: {}'.format(self.base_currency, self.quote_currency, self._api_key))
 
     def __str__(self) -> str:
         """String representation."""

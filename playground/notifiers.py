@@ -24,5 +24,17 @@ class TwitterNotifier:
     def post_fear_greed_update(self, yesterday, today):
         self.api.update_status("Yesterday's F&G: {}\nToday's F&G: {}".format(yesterday, today))
 
-    def post_tweet(self, timeframe, reason):
-        self.api.update_status("{} - {}")
+    def post_results_tweet(self, tweet_string: str = ''):
+        self.api.update_status("{}".format(tweet_string))
+
+    def post_tweet_ft(
+        self, ft_name, reason, exit_price=None, entry_price=None, entry_capital=None, risk=None,
+    ):
+        if exit_price:
+            self.api.update_status("{} - {}\nExit Price: {}".format(
+                ft_name, reason, exit_price, 
+            ))
+        elif entry_price and entry_capital and risk:
+            self.api.update_status("{} - {}\nEntry Price: {}\nEntry Capital: {}\nRisk: {} (static)".format(
+                ft_name, reason, entry_price, entry_capital, risk,
+            ))

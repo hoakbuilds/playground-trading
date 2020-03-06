@@ -84,8 +84,14 @@ class ApiServer:
         # testing
         self.app.add_url_rule(f'{BASE_URI}/ping', 'ping',
                               view_func=self._ping, methods=['GET'])
-        self.app.add_url_rule(f'{BASE_URI}/wallet_balances', 'balances',
+        self.app.add_url_rule(f'{BASE_URI}/wallet_balances', 'wallet_balances',
                               view_func=self._balances, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/forwardtesting_shorts', 'forwardtesting_shorts',
+                              view_func=self._ft_shorts, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/forwardtesting_longs', 'forwardtesting_longs',
+                              view_func=self._ft_longs, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/forwardtesting_results', 'forwardtesting_results',
+                              view_func=self._ft, methods=['GET'])
         # Actions to control the bot
         self.app.add_url_rule(f'{BASE_URI}/start', 'start',
                               view_func=self._start, methods=['POST'])
@@ -132,7 +138,7 @@ class ApiServer:
 
     def _balances(self):
         """
-        simple poing version
+        simple wallet ping
         """
         _balances: list = self._worker.wallet.get_balances()
         return self.rest_dump({"balances": _balances})
@@ -142,3 +148,24 @@ class ApiServer:
         simple poing version
         """
         return self.rest_dump({"status": "pong"})
+
+    def _ft(self):
+        """
+        get forwardtesting live results
+        """
+        _fts: list = [x._get_results() for x in self._worker.forwardtests]
+        return self.rest_dump(_fts)
+
+    def _ft_longs(self):
+        """
+        get forwardtesting live results
+        """
+        _fts: list = [x._get_shorts() for x in self._worker.forwardtests]
+        return self.rest_dump(_fts)
+    
+    def _ft_shorts(self):
+        """
+        get forwardtesting live results
+        """
+        _fts: list = [x._get_longs() for x in self._worker.forwardtests]
+        return self.rest_dump(_fts)
