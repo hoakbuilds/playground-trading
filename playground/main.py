@@ -21,13 +21,21 @@ def main(sysargv: List[str] = None) -> None:
     logger.info('Launching environment..')
 
     return_code: Any = 1
+
+    worker = Worker()
+
     try:
-        worker = Worker()
-
         worker.run()
-
     except KeyboardInterrupt:
         logger.info('SIGINT received, aborting ...')
+
+        for ft in worker.forwardtests:
+            if len(ft.data) != 0:
+                ft.print_results()
+                #ft.chart()
+
+        # TODO: stuff related with livetrading
+
         return_code = 0
 
 

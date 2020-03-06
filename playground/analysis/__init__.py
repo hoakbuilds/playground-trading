@@ -7,7 +7,9 @@ __license__ = "GPL"
 __email__ = "murlux@protonmail.com"
 __status__ = "Prototype"
 
-__version__ = "0.0.kek"
+__version__ = "0.0.1"
 
 
-from playground import *
+from .analysis import Analyser
+from .correlation import *
+from .mrfi import MRFI
