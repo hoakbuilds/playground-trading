@@ -57,9 +57,12 @@ venv/
 
 # Project specific for development etc
 
+data/
 results/
 charts/
 keys.txt
+
 # general logs
+logs/
 .*.txt
 *.txt
