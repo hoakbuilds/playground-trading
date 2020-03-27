@@ -12,8 +12,11 @@ from typing import Dict, Callable, Any
 
 from flask import Flask, jsonify, request
 from flask.json import JSONEncoder
+from flask_cors import CORS
 from werkzeug.serving import make_server
+from playground import settings
 from playground.util import setup_logger
+
 BASE_URI = '/api/v1'
 
 
@@ -27,6 +30,7 @@ class ApiServer:
         """
         self.logger = setup_logger(name=__name__)
         self.app = Flask(__name__)
+        CORS(self.app)
 
         if worker:
             self._worker = worker
@@ -45,8 +49,8 @@ class ApiServer:
         """
         Method that runs flask app in its own thread forever.
         """
-        rest_ip = '127.0.0.1'
-        rest_port = 3000
+        rest_ip = '0.0.0.0'
+        rest_port = 5000
 
         self.logger.info(f'Starting HTTP Server at {rest_ip}:{rest_port}')
 
@@ -84,6 +88,10 @@ class ApiServer:
         # testing
         self.app.add_url_rule(f'{BASE_URI}/ping', 'ping',
                               view_func=self._ping, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/warehouse_information', 'warehouse_information',
+                              view_func=self._wh_info, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/get_dataset/<pair>/<timeframe>/', 'get_dataset',
+                              view_func=self._get_dataset, methods=['GET'])
         self.app.add_url_rule(f'{BASE_URI}/wallet_balances', 'wallet_balances',
                               view_func=self._balances, methods=['GET'])
         self.app.add_url_rule(f'{BASE_URI}/forwardtesting_shorts', 'forwardtesting_shorts',
@@ -160,12 +168,28 @@ class ApiServer:
         """
         get forwardtesting live results
         """
-        _fts: list = [x._get_shorts() for x in self._worker.forwardtests]
+        _fts: list = [x._get_longs() for x in self._worker.forwardtests]
         return self.rest_dump(_fts)
     
     def _ft_shorts(self):
         """
         get forwardtesting live results
         """
-        _fts: list = [x._get_longs() for x in self._worker.forwardtests]
+        _fts: list = [x._get_shorts() for x in self._worker.forwardtests]
         return self.rest_dump(_fts)
+
+    def _wh_info(self):
+        """
+        Get pairs with available datasets.
+        """
+        _pairs: list = [str(x) for x in self._worker.market_pairs]
+        _timeframes: list = [x for x in settings.WAREHOUSE_TIMEFRAMES]
+        return self.rest_dump({'pairs':_pairs, 'timeframes': _timeframes})
+    
+    def _get_dataset(self, pair=None, timeframe=None):
+        """
+        Get pairs with available datasets.
+        """
+        tf: str = timeframe.replace('_', ' ')
+        dataset = self._worker.wh.get_dataset(pair=pair, timeframe=tf, analysed=True).to_json()
+        return self.rest_dump({'data': dataset})

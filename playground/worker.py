@@ -12,15 +12,14 @@ from datetime import datetime as dt
 from playground import __version__, settings
 from playground.analysis import Analyser
 from playground.api_server import ApiServer
-from playground.dataprovider import DataProvider
 from playground.enums import State
-from playground.logic import strategy_v1
 from playground.pair import MarketPair
 from playground.simulation import ForwardTestSession
 from playground.util import setup_logger
 from playground.util_ops import get_delta_callable_for_tf
 from playground.wallet import Wallet
 from playground.warehouse import Warehouse
+from playground import logic
 #from playground.strategy import Strategy
 
 
@@ -99,13 +98,18 @@ class Worker:
             for pair in self.market_pairs:
                 self.logger.info('Launching FTS for: {} - {}'.format(pair, op_tf))
                 _dataset = self.wh.get_dataset(pair=pair, timeframe=op_tf, analysed=True,)
-                ft: ForwardTestSession = ForwardTestSession(
-                    data=_dataset,
-                    initial_capital=settings.FT_INITIAL_CAPITAL,
-                    pair=pair,
-                    tf=op_tf,
-                    logic=strategy_v1,
-                )
+                _candle = self.wh.get_latest_candle(pair=pair, timeframe=op_tf, analysed=True, closed=True) # analysed candle
+
+                for strategy in pair.strategies:
+                    strategy_function = getattr(logic, strategy)
+                    ft: ForwardTestSession = ForwardTestSession(
+                        data=_dataset,
+                        yesterday=_candle,
+                        initial_capital=settings.FT_INITIAL_CAPITAL[pair.wallet_currency],
+                        pair=pair,
+                        tf=op_tf,
+                        logic=strategy_function,
+                    )
                 self.forwardtests.append(ft)
 
     def parse_strategies(self):

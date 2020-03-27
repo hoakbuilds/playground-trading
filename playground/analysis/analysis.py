@@ -65,8 +65,7 @@ class Analyser:
         previous_crossing_col = df[crossing_col].shift(1)
         previous_crossed_col = df[crossed_col].shift(1)
 
-        crossing = (((df[crossing_col] <= df[crossed_col]) & (previous_crossing_col >= previous_crossed_col))
-                    | ((df[crossing_col] >= df[crossed_col]) & (previous_crossing_col <= previous_crossed_col)))
+        crossing = ((df[crossing_col] > df[crossed_col]) & (previous_crossing_col < previous_crossed_col))
         df.loc[crossing, new_col] = True
         df[new_col].fillna(value='False', inplace=True)
 
@@ -79,6 +78,15 @@ class Analyser:
         df['ema20_50_cross'] = self.crossover(df=df, crossing_col='ema20', crossed_col='ema50', new_col='ema20_50_cross')
         df['ema20_100_cross'] = self.crossover(df=df, crossing_col='ema20', crossed_col='ema100', new_col='ema20_100_cross')
         df['ema50_100_cross'] = self.crossover(df=df, crossing_col='ema50', crossed_col='ema100', new_col='ema50_100_cross')
+        df['ema100_200_cross'] = self.crossover(df=df, crossing_col='ema100', crossed_col='ema200', new_col='ema100_200_cross')
+        df['ema100_300_cross'] = self.crossover(df=df, crossing_col='ema100', crossed_col='ema300', new_col='ema100_300_cross')
+
+        # EMA Cross-under
+        df['ema50_20_cross'] = self.crossover(df=df, crossing_col='ema50', crossed_col='ema20', new_col='ema50_20_cross')
+        df['ema100_20_cross'] = self.crossover(df=df, crossing_col='ema100', crossed_col='ema20', new_col='ema100_20_cross')
+        df['ema100_50_cross'] = self.crossover(df=df, crossing_col='ema100', crossed_col='ema50', new_col='ema100_50_cross')
+        df['ema200_100_cross'] = self.crossover(df=df, crossing_col='ema200', crossed_col='ema100', new_col='ema200_100_cross')
+        df['ema300_100_cross'] = self.crossover(df=df, crossing_col='ema300', crossed_col='ema100', new_col='ema300_100_cross')
 
         # Bollinger Bands Crossing
         df['touch_upper'] = df.high >= df.upper
@@ -91,6 +99,21 @@ class Analyser:
         df['smrfi_os'] = df.smrfi < 30
         df['mrfi_ob'] = df.mrfi > 75
         df['mrfi_os'] = df.mrfi < 25
+        df['mfi_os'] = df.mrfi < 20
+        df['mfi_ob'] = df.mrfi > 80
+        df['rsi_os'] = df.mrfi < 30
+        df['rsi_ob'] = df.mrfi > 70
+
+        # Stoch Cross SMRFI / MRFI
+        df['slow_stoch_crossover_smrfi'] = self.crossover(df=df, crossing_col='slow_stoch', crossed_col='smrfi', new_col='slow_stoch_crossover_smrfi')
+        df['slow_stoch_crossover_mrfi'] = self.crossover(df=df, crossing_col='slow_stoch', crossed_col='mrfi', new_col='slow_stoch_crossover_mrfi')
+        df['slow_stoch14_crossover_smrfi'] = self.crossover(df=df, crossing_col='slow_stoch_sma14', crossed_col='smrfi', new_col='slow_stoch14_crossover_smrfi')
+        df['slow_stoch14_crossover_mrfi'] = self.crossover(df=df, crossing_col='slow_stoch_sma14', crossed_col='mrfi', new_col='slow_stoch14_crossover_mrfi')
+
+        df['slow_stoch_crossunder_smrfi'] = self.crossover(df=df, crossing_col='smrfi', crossed_col='slow_stoch', new_col='slow_stoch_crossunder_smrfi')
+        df['slow_stoch_crossunder_mrfi'] = self.crossover(df=df, crossing_col='mrfi', crossed_col='slow_stoch', new_col='slow_stoch_crossunder_mrfi')
+        df['slow_stoch14_crossunder_smrfi'] = self.crossover(df=df, crossing_col='smrfi', crossed_col='slow_stoch_sma14', new_col='slow_stoch14_crossunder_smrfi')
+        df['slow_stoch14_crossunder_mrfi'] = self.crossover(df=df, crossing_col='mrfi', crossed_col='slow_stoch_sma14', new_col='slow_stoch14_crossunder_mrfi')
 
         return df
 
@@ -110,6 +133,8 @@ class Analyser:
         df['ema20'] = abstract_ta.EMA(df, timeperiod=20)
         df['ema50'] = abstract_ta.EMA(df, timeperiod=50)
         df['ema100'] = abstract_ta.EMA(df, timeperiod=100)
+        df['ema200'] = abstract_ta.EMA(df, timeperiod=200)
+        df['ema300'] = abstract_ta.EMA(df, timeperiod=300)
 
         # Bollinger Bands
         u, m, l = abstract_ta.BBANDS(HLOCV, timeperiod=24, nbdevup=2.5, nbdevdn=2.5, matype=MA_Type.T3)
@@ -122,6 +147,8 @@ class Analyser:
         slowk, slowd = abstract_ta.STOCH(HLOCV, 5, 3, 0, 3, 0) # uses high, low, close by default
         df['slowk'] = slowk
         df['slowd'] = slowd
+        df['slow_stoch'] = (slowk + slowd)/2
+        df['slow_stoch_sma14'] = df.slow_stoch.rolling(window=14).mean()
 
         # Relative Strength Index
         rsi = abstract_ta.RSI(df, timeperiod=14)

@@ -117,6 +117,7 @@ class Position:
         return {
             'id': str(self.no),
             'pair': str(self.pair),
+            'date': str(self.date),
             'tf': str(self.tf),
             'type': str(self.type),
             'entry_price': str(self.entry_price),

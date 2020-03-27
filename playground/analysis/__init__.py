@@ -1,3 +1,4 @@
+__name__ = "analysis"
 __title__ = "playground"
 __author__ = "github.com/murlokito"
 __description__ = __title__ + " Not your typical trading bot."

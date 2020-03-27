@@ -1,5 +1,9 @@
 
-# ######### API CONFIGURATIONS ######### #
+# ############### API CONFIGURATIONS ############### #
+
+# ########## COIN MARKET CAP PRO API KEY ########### #
+# used for some global data
+CMC_PRO_API_KEY = '770d19e3-b391-4e99-8e48-67dfcf10d508' 
 
 # ######### CRYPTOCOMPARE API KEY ###### #
 # default key in case of not tracking 1min dataset (44k calls/mo)

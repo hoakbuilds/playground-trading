@@ -16,9 +16,11 @@ DEBUG = True
 CRYPTOCOMPARE_VERBOSITY = False
 ANALYSIS_VERBOSITY = False
 WORKER_EXTRA_VERBOSITY = False
-WORKER_VERBOSITY = DEBUG
+WORKER_VERBOSITY = False
 WAREHOUSE_EXTRA_VERBOSITY = False
-WAREHOUSE_VERBOSITY = DEBUG
+WAREHOUSE_VERBOSITY = False
+BACKTESTING_VERBOSITY = DEBUG
+FORWARDTESTING_VERBOSITY = DEBUG
 
 ###############################################
 # ########## LIVE EXECUTION CONFIGURATION ########## # TODO: DO IT, IT'S WRONG
@@ -59,7 +61,11 @@ INITIAL_CAPITAL = [
 
 # ######### general parameters ############## #
 
-DATASET_FOLDER = 'data/'
+DATASET_FOLDER = '/home/zenkai/playground_data/'
+CHARTS_FOLDER = '/home/zenkai/playground_charts/'
+BACKTESTS_CHARTS_FOLDER = CHARTS_FOLDER + '{}/'.format('backtests')
+FORWARDTESTS_CHARTS_FOLDER = CHARTS_FOLDER + '{}/'.format('forwardtests')
+
 
 # ######### analysis parameter ############## #
 
@@ -99,17 +105,6 @@ MARKET_PAIRS = [
     },
     {
         'base_currency': {
-            'ticker': 'XTZ',
-            'name': 'tezzies',
-        },
-        'quote_currency': {
-            'ticker': 'USD',
-            'name': 'dolla dolla bill',
-        },
-        'apikey': CCAPI_KEY_XTZUSD,
-    },
-    {
-        'base_currency': {
             'ticker': 'XRP',
             'name': 'XRPONZO',
         },
@@ -118,39 +113,6 @@ MARKET_PAIRS = [
             'name': 'dolla dolla bill',
         },
         'apikey': CCAPI_KEY_XRPUSD,
-    },
-    {
-        'base_currency': {
-            'ticker': 'LTC',
-            'name': 'litecona',
-        },
-        'quote_currency': {
-            'ticker': 'USD',
-            'name': 'dolla dolla bill',
-        },
-        'apikey': CCAPI_KEY_LTCUSD,
-    },
-    {
-        'base_currency': {
-            'ticker': 'LINK',
-            'name': 'unchainedLINK',
-        },
-        'quote_currency': {
-            'ticker': 'USD',
-            'name': 'dolla dolla bill',
-        },
-        'apikey': CCAPI_KEY_LINKUSD,
-    },
-    {
-        'base_currency': {
-            'ticker': 'LINK',
-            'name': 'unchainedLINK',
-        },
-        'quote_currency': {
-            'ticker': 'BTC',
-            'name': 'Bitcoin',
-        },
-        'apikey': CCAPI_KEY_TRXBTC,
     },
     {
         'base_currency': {
@@ -191,7 +153,11 @@ MARKET_PAIRS = [
 # ###### FORWARDTESTING CONFIGURATION ####### #
 ###############################################
 
-FT_INITIAL_CAPITAL = 10000
+FT_INITIAL_CAPITAL = {
+    'BTC': 0.1,
+    'USD': 10000,
+    'EUR': 10000,
+}
 
 MINIMUM_OPERATING_TIMEFRAME = '5 m'
 MAIN_OPERATING_PAIR = 'BTCUSD'
@@ -206,6 +172,10 @@ FT_MARKETPAIRS = [
             'ticker': 'USD',
             'name': 'dolla dolla bill',
         },
+        'wallet_currency': 'USD',
+        'strategies': [
+            'chopfucker_v1',
+        ]
     },
     {
         'base_currency': {
@@ -216,81 +186,15 @@ FT_MARKETPAIRS = [
             'ticker': 'USD',
             'name': 'dolla dolla bill',
         },
-    },
-    {
-        'base_currency': {
-            'ticker': 'XTZ',
-            'name': 'tezzies',
-        },
-        'quote_currency': {
-            'ticker': 'USD',
-            'name': 'dolla dolla bill',
-        },
-    },
-    {
-        'base_currency': {
-            'ticker': 'XRP',
-            'name': 'XRPONZO',
-        },
-        'quote_currency': {
-            'ticker': 'USD',
-            'name': 'dolla dolla bill',
-        },
-    },
-    {
-        'base_currency': {
-            'ticker': 'LTC',
-            'name': 'litecona',
-        },
-        'quote_currency': {
-            'ticker': 'USD',
-            'name': 'dolla dolla bill',
-        },
-    },
-    {
-        'base_currency': {
-            'ticker': 'LINK',
-            'name': 'unchainedLINK',
-        },
-        'quote_currency': {
-            'ticker': 'USD',
-            'name': 'dolla dolla bill',
-        },
-    },
-    {
-        'base_currency': {
-            'ticker': 'LINK',
-            'name': 'unchainedLINK',
-        },
-        'quote_currency': {
-            'ticker': 'BTC',
-            'name': 'Bitcoin',
-        },
-    },
-    {
-        'base_currency': {
-            'ticker': 'ETH',
-            'name': 'etHerioeunm',
-        },
-        'quote_currency': {
-            'ticker': 'BTC',
-            'name': 'Bitcoin',
-        },
-    },
-    {
-        'base_currency': {
-            'ticker': 'LTC',
-            'name': 'litecona',
-        },
-        'quote_currency': {
-            'ticker': 'BTC',
-            'name': 'Bitcoin',
-        },
+        'wallet_currency': 'USD',
+        'strategies': [
+            'strategy_v1',
+        ]
     }
 ]
 
 FT_TIMEFRAMES = [
-   '5 m', '15 m', '30 m', '1 h',
+   '5 m', '15 m', '30 m', '1 h', '4 h', '1 D'
 ]
 
 __all__ = [

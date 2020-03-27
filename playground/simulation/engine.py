@@ -12,6 +12,7 @@ import warnings
 import time
 import logging
 from datetime import datetime as dt
+from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta as rd
 from typing import Callable
 
@@ -25,7 +26,10 @@ from playground.util_ops import get_delta_callable_for_tf
 
 class BackTestSession():
     """An object representing a Back Testing Simulation."""
+
     _name: str
+    __verbosity: bool = False
+
     def __init__(self, data):
         """Initate the BackTestSession.
         :param data: An HLOCV+ pandas dataframe with a datetime index
@@ -42,6 +46,7 @@ class BackTestSession():
             warnings.warn(msg)
 
         self.data = data
+        self.__verbosity = settings.FORWARDTESTING_VERBOSITY
 
     def start(self, initial_capital, logic):
         """Start BackTestSession.
@@ -133,7 +138,7 @@ class BackTestSession():
         :param title: Plot title
         :type title: str
         """     
-        bokeh.plotting.output_file("charts/backtests/{}".format(self._name), title=title)
+        bokeh.plotting.output_file("{}{}".format(settings.BACKTESTS_CHARTS_FOLDER, self._name), title=title)
         p = bokeh.plotting.figure(x_axis_type="datetime", plot_width=1000, plot_height=400, title=title)
         p.grid.grid_line_alpha = 0.3
         p.xaxis.axis_label = 'Date'
@@ -170,6 +175,8 @@ class ForwardTestSession():
     """An object representing a Forward Testing Simulation."""
 
     backdata: pd.DataFrame = None
+    yesterday: pd.DataFrame = None
+    today: pd.DataFrame = None
     data: pd.DataFrame = pd.DataFrame()
     initial_capital: float = 1.0
     pair: dict = None
@@ -178,13 +185,20 @@ class ForwardTestSession():
     logic: Callable = None
     logger: logging.Logger
     _name: str = ''
-    __last_analysis: dt = None
+    _tts: str = ''
+    _simple_tts: str = ''
+    __start_time: dt = None
+    __next_candle: dt = None
+    __next_analysis: dt = None
     __analysis_throttle: rd = None
+    __verbosity: bool = False
 
-    def __init__(self, data, initial_capital, pair, tf, logic,):
+    def __init__(self, data, yesterday, initial_capital, pair, tf, logic,):
         """Initate the ForwardTestSession.
         :param data: An HLOCV+ pandas dataframe with a datetime index
         :type data: pandas.DataFrame
+        :param yesterday: An HLOCV+ pandas dataframe with a datetime index
+        :type yesterday: pandas.DataFrame
         :param initial_capital: Starting capital to fund account
         :type initial_capital: float
         :param pair: Operating market pair
@@ -206,11 +220,16 @@ class ForwardTestSession():
 
         self.tracker = []
         self.backdata = data.copy()
+        self.yesterday = yesterday
+        self.today = None
         self.backdata = self.backdata.set_index('datetime').sort_index(inplace=True, ascending=False)
         self.account = Account(initial_capital=initial_capital, pair=pair, tf=tf)
         self.logic = logic
         self.pair = pair
         self.tf = tf
+        self._simple_tts = '{} - {}\n\n'.format(
+            self.pair, self.tf, logic.__name__,
+        )
         self._tts = __name__+'\n\n{} - {}\n :: {}\n\n'.format(
             self.pair, self.tf, logic.__name__,
         )
@@ -218,16 +237,20 @@ class ForwardTestSession():
             self.pair, self.tf, logic.__name__, str(dt.now().date()),
         ).replace(' ', '')
         self.logger = setup_logger(name=self._name)
-        self.__last_analysis = dt.now()
-        self.logger.info('Forwardtesting session started for: {}-{} using {} at {} '.format(
-            self.pair, self.tf, self.logic.__name__, self.__last_analysis,
-            ),
-        )
         # rd stands for relativedelta
         rd_call: Callable = None
         rd_args: dict = None
-        rd_call, rd_args = get_delta_callable_for_tf(tf=settings.MINIMUM_OPERATING_TIMEFRAME)
+        rd_call, rd_args = get_delta_callable_for_tf(tf=self.tf)
+        self.__verbosity = settings.FORWARDTESTING_VERBOSITY
         self.__analysis_throttle = rd_call(**rd_args)
+        self.__next_candle = (dt.fromtimestamp(self.yesterday.time) + self.__analysis_throttle)
+        self.__next_analysis = (self.__next_candle + self.__analysis_throttle)
+        self.__start_time = dt.now()
+        self.logger.info('Forwardtesting session started for: {}-{} using {} at {} '.format(
+            self.pair, self.tf, self.logic.__name__, self.__start_time,
+            ),
+        )
+        self.logger.info('next analysis {}'.format(self.__next_analysis))
 
     def update_dataset(self, dataset):
         """Process ForwardTestSession.
@@ -246,8 +269,7 @@ class ForwardTestSession():
 
         current_time = dt.now()
 
-        if current_time > (self.__last_analysis + self.__analysis_throttle):
-            self.__last_analysis = dt.now()
+        if current_time > (self.__next_analysis):
             self.logger.info(
                 'Processing... %-4s - %-4s - %-4s ' + '------------'*10,
                 self.pair, self.tf, today.datetime,
@@ -300,8 +322,12 @@ class ForwardTestSession():
                 logger=self.logger,
                 last_candle=today,
                 _tts=self._tts,
+                _simple_tts=self._simple_tts
             )
 
+            self.__next_candle = (dt.fromtimestamp(today.time) + self.__analysis_throttle)
+            self.__next_analysis = (self.__next_analysis + self.__analysis_throttle)
+            self.yesterday = today
             # Cleanup empty positions
             # self.account.purge_positions()     
             # ------------------------------------------------------------
@@ -401,9 +427,8 @@ class ForwardTestSession():
     def _get_longs(self):
         return self.account._get_longs()
 
-    def _get_longs(self):
+    def _get_shorts(self):
         return self.account._get_shorts()
-       
 
     def chart(self, show_trades=False, title="Equity Curve"):
         """Chart results.
@@ -412,7 +437,7 @@ class ForwardTestSession():
         :param title: Plot title
         :type title: str
         """     
-        bokeh.plotting.output_file("charts/forwardtests/chart-{0}.html".format(self._name), title=title)
+        bokeh.plotting.output_file("{}chart-{0}.html".format(settings.FORWARDTESTS_CHARTS_FOLDER, self._name), title=title)
         p = bokeh.plotting.figure(x_axis_type="datetime", plot_width=1000, plot_height=400, title=title)
         p.grid.grid_line_alpha = 0.3
 

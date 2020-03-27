@@ -28,12 +28,12 @@ def main(sysargv: List[str] = None) -> None:
         worker.run()
     except KeyboardInterrupt:
         logger.info('SIGINT received, aborting ...')
-
+        """
         for ft in worker.forwardtests:
             if len(ft.data) != 0:
                 ft.print_results()
                 #ft.chart()
-
+        """
         # TODO: stuff related with livetrading
 
         return_code = 0
