@@ -50,7 +50,7 @@ class ApiServer:
         Method that runs flask app in its own thread forever.
         """
         rest_ip = '0.0.0.0'
-        rest_port = 5000
+        rest_port = 5566
 
         self.logger.info(f'Starting HTTP Server at {rest_ip}:{rest_port}')
 

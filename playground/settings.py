@@ -61,8 +61,9 @@ INITIAL_CAPITAL = [
 
 # ######### general parameters ############## #
 
-DATASET_FOLDER = '/home/zenkai/playground_data/'
-CHARTS_FOLDER = '/home/zenkai/playground_charts/'
+BASE_FOLDER = '/home/hugo/Desktop/blockmountainlabs/playground'
+DATASET_FOLDER = '{}/data/'.format(BASE_FOLDER)
+CHARTS_FOLDER = '{}/charts/'.format(BASE_FOLDER)
 BACKTESTS_CHARTS_FOLDER = CHARTS_FOLDER + '{}/'.format('backtests')
 FORWARDTESTS_CHARTS_FOLDER = CHARTS_FOLDER + '{}/'.format('forwardtests')
 

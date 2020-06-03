@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Callable, Optional
 from playground import enums
 from playground import settings as s
 from playground.analysis import Analyser
+from playground.enums import RunMode
 from playground.cryptocompare import CryptoCompareAPI
 from playground.pair import MarketPair
 from playground.util import (
@@ -51,7 +52,7 @@ class Warehouse:
     __throttle: int = 2
     __rate_throttle: int = 1
 
-    def __init__(self,) -> None:
+    def __init__(self, mode: RunMode = RunMode.DRY_RUN) -> None:
         """
         Initialize the Warehouse object with the settings.
         """
@@ -92,7 +93,7 @@ class Warehouse:
         
         self.set_ready()
 
-        self.logger.info('Warehouse ready.')
+        self.logger.info('Warehouse ready. Mode: %s', mode)
 
     def get_latest_candle(
         self, pair: MarketPair = None, timeframe: str = '', analysed: bool = False, closed: bool = False,

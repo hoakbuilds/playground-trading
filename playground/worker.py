@@ -275,8 +275,11 @@ class Worker:
             if settings.MINIMUM_OPERATING_TIMEFRAME == '1 m':
                 if time_left > 60:
                     time_left = 1
+            elif settings.MINIMUM_OPERATING_TIMEFRAME == '5 m':
+                if time_left > 300:
+                    time_left = 5
             self.logger.info(
-                'Sleeping for %ds', time_left,
+                'MIN: %s | Sleeping for %ds', settings.MINIMUM_OPERATING_TIMEFRAME, time_left,
             )
             time.sleep(time_left)
 

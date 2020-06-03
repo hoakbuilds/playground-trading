@@ -17,7 +17,7 @@ import plotly.figure_factory as ff
 
 
 def merge_dfs_on_column(dataframes: list, labels, col):
-    '''Merge a single column of each dataframe into a new combined dataframe'''
+    """Merge a single column of each dataframe into a new combined dataframe"""
     series_dict = {}
     for index in range(len(dataframes)):
         series_dict[labels[index]] = dataframes[index][col]
@@ -29,7 +29,7 @@ def df_scatter(
     df: pd.DataFrame, title: str, y_axis_label: str = '', scale: str = 'linear', initial_hide: bool = False,
     seperate_y_axis: bool = False,
 ):
-    '''Generate a scatter plot of the entire dataframe'''
+    """Generate a scatter plot of the entire dataframe"""
     label_arr = list(df)
     series_arr = list(map(lambda col: df[col], label_arr))
     
@@ -72,7 +72,7 @@ def df_scatter(
 
 
 def correlation_heatmap(df: pd.DataFrame, title: str, absolute_bounds: bool = True):
-    '''Plot a correlation heatmap for the entire dataframe'''
+    """Plot a correlation heatmap for the entire dataframe"""
     heatmap = go.Heatmap(
         z=df.corr(method='pearson').as_matrix(),
         x=df.columns,
