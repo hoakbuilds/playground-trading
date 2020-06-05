@@ -16,6 +16,8 @@ from playground.cryptocompare import CryptoCompareAPI
 def get_delta_callable_for_tf(tf: str, ) -> (Callable, Callable):
     """
     Returns a relativedelta callable and it's arguments for the timeframe.
+
+    param: tf -- the timeframe object.
     """
 
     api_call: Callable = None
@@ -60,11 +62,9 @@ def get_limit_for_candle_delta(candle: pd.DataFrame, config: Dict[str, Any]) -> 
     """
     Returns the amount of periods since the candle has closed.
 
-    param: config -- the config of the running objejct.
+    param: config -- the config of the running object.
 
-    TODO: dot notation & indexing
-
-    param: candle -- the last candle of the running objjejje.
+    param: candle -- the last candle of the running object.
     """
     tf = config.get('timeframe', None)
 
@@ -75,11 +75,9 @@ def get_limit_for_candle_delta(candle: pd.DataFrame, config: Dict[str, Any]) -> 
     delta = rd_call(**rd_args)
 
     current_time = dt.now()
-    candle_time = dt.fromtimestamp(candle.time)
-    #TODO: dot notation & indexing
+    candle_time = dt.fromtimestamp(candle.timestamp)
     time_since = relativedelta(current_time, candle_time)
 
-    #TODO: pls
     split = tf.split()
     limit: int = 0
     time_period = int(split[0])
@@ -94,7 +92,7 @@ def get_limit_for_candle_delta(candle: pd.DataFrame, config: Dict[str, Any]) -> 
 
         if time_since.days != 0:
             limit = int((time_since.days * 24) / time_period)
-        limit = time_since.hours / time_period
+        limit += int(time_since.hours / time_period)
 
     elif split[1] == 'D':
 
@@ -114,9 +112,9 @@ def get_cc_callable_by_time(config: Dict[str, Any], candle: pd.DataFrame, cc: Cr
     """
     Returns a direct CCAPI callable and it's arguments for the passed candle based on time since passed.
 
-    param: config -- the config of the running objejct.
+    param: config -- the config of the running object.
 
-    param: candle -- the last candle of the running objjejje.
+    param: candle -- the last candle of the running object.
 
     param: cc -- the cryptocompareapi object.
     """
@@ -157,7 +155,7 @@ def get_cc_callable_by_def(config: Dict[str, Any], cc: CryptoCompareAPI = None) 
     """
     Returns a direct CCAPI callable and it's arguments for the passed timeframe definition.
 
-    param: config -- the config of the running objejct.
+    param: config -- the config of the running object.
 
     param: cc -- the cryptocompareapi object.
     """

@@ -1,4 +1,4 @@
-__name__ = "playground"
+__name__ = "simulation"
 __title__ = "playground"
 __author__ = "github.com/murlokito"
 __description__ = __title__ + " Not your typical trading bot."
@@ -10,5 +10,7 @@ __status__ = "Prototype"
 
 __version__ = "0.0.1"
 
-
-from . import *
+from playground.simulation.account import *
+from playground.simulation.engine import *
+from playground.simulation.position import *
+from playground.simulation.helpers import *

@@ -7,18 +7,26 @@ __email__ = "murlux@protonmail.com"
 
 from settings_local import *
 
-# ######### operation settings ######### #
-# General DEBUG, for maximum efficiency set to `True` and point all verbosity vars to it
+###############################################
+# ########## LOGGING CONFIGURATION ########## #
+###############################################
+
 DEBUG = True
 
-# This setting defines if the warehouse should log extra verbosely
-WORKER_VERBOSITY = DEBUG
 CRYPTOCOMPARE_VERBOSITY = False
+ANALYSIS_VERBOSITY = False
+WORKER_EXTRA_VERBOSITY = False
+WORKER_VERBOSITY = False
 WAREHOUSE_EXTRA_VERBOSITY = False
-WAREHOUSE_VERBOSITY = DEBUG
-DATASET_FOLDER = 'data/'
+WAREHOUSE_VERBOSITY = False
+BACKTESTING_VERBOSITY = DEBUG
+FORWARDTESTING_VERBOSITY = DEBUG
 
-# ######### dry execution parameters ######### #
+###############################################
+# ########## LIVE EXECUTION CONFIGURATION ########## # TODO: DO IT, IT'S WRONG
+###############################################
+
+PREF_XBT_FIAT = 'USD'
 
 INITIAL_CAPITAL = [
     {
@@ -27,6 +35,15 @@ INITIAL_CAPITAL = [
             'name': 'dolla dolla bill',
         },
         'initial_balance': 10000,
+        'apikey': CCAPI_KEY,
+    },
+    {
+        'currency': {
+            'ticker': 'EUR',
+            'name': 'jjust euro things',
+        },
+        'initial_balance': 10000,
+        'apikey': CCAPI_KEY,
     },
     {
         'currency': {
@@ -34,16 +51,35 @@ INITIAL_CAPITAL = [
             'name': 'Bitcoin',
         },
         'initial_balance': 0.10000000,
+        'apikey': CCAPI_KEY,
     },
 ]
 
-# ######### operating timeframes ######### #
+###############################################
+# ######### WAREHOUSE CONFIGURATION ######### #
+###############################################
 
-TIMEFRAMES = [
-    '5 m','15 m', '1 m', '1 h', '4 h', '1 D', '3 D',
+# ######### general parameters ############## #
+
+BASE_FOLDER = '/home/hugo/Desktop/blockmountainlabs/playground'
+DATASET_FOLDER = '{}/data/'.format(BASE_FOLDER)
+CHARTS_FOLDER = '{}/charts/'.format(BASE_FOLDER)
+BACKTESTS_CHARTS_FOLDER = CHARTS_FOLDER + '{}/'.format('backtests')
+FORWARDTESTS_CHARTS_FOLDER = CHARTS_FOLDER + '{}/'.format('forwardtests')
+
+
+# ######### analysis parameter ############## #
+
+FORCE_STARTUP_ANALYSIS = False
+MAX_ROWS = 5000
+
+# ########## operating timeframes ########### #
+
+WAREHOUSE_TIMEFRAMES = [
+    '5 m','15 m', '30 m', '1 h', '4 h', '1 D', '3 D',
 ]
 
-# ######### operating market pairs ######### #
+# ######### operating market pairs ########## #
 
 MARKET_PAIRS = [
     {
@@ -55,6 +91,7 @@ MARKET_PAIRS = [
             'ticker': 'USD',
             'name': 'dolla dolla bill',
         },
+        'apikey': CCAPI_KEY_BTCUSD,
     },
     {
         'base_currency': {
@@ -65,16 +102,7 @@ MARKET_PAIRS = [
             'ticker': 'USD',
             'name': 'dolla dolla bill',
         },
-    },
-    {
-        'base_currency': {
-            'ticker': 'XTZ',
-            'name': 'tezzies',
-        },
-        'quote_currency': {
-            'ticker': 'USD',
-            'name': 'dolla dolla bill',
-        },
+        'apikey': CCAPI_KEY_ETHUSD,
     },
     {
         'base_currency': {
@@ -85,6 +113,7 @@ MARKET_PAIRS = [
             'ticker': 'USD',
             'name': 'dolla dolla bill',
         },
+        'apikey': CCAPI_KEY_XRPUSD,
     },
     {
         'base_currency': {
@@ -95,6 +124,81 @@ MARKET_PAIRS = [
             'ticker': 'BTC',
             'name': 'Bitcoin',
         },
+        'apikey': CCAPI_KEY_ETHBTC,
     },
+    {
+        'base_currency': {
+            'ticker': 'XRP',
+            'name': 'XRPONZO',
+        },
+        'quote_currency': {
+            'ticker': 'BTC',
+            'name': 'Bitcoin',
+        },
+        'apikey': CCAPI_KEY_XRPBTC,
+    },
+    {
+        'base_currency': {
+            'ticker': 'LTC',
+            'name': 'litecona',
+        },
+        'quote_currency': {
+            'ticker': 'BTC',
+            'name': 'Bitcoin',
+        },
+        'apikey': CCAPI_KEY_LTCBTC,
+    }
 ]
 
+###############################################
+# ###### FORWARDTESTING CONFIGURATION ####### #
+###############################################
+
+FT_INITIAL_CAPITAL = {
+    'BTC': 0.1,
+    'USD': 10000,
+    'EUR': 10000,
+}
+
+MINIMUM_OPERATING_TIMEFRAME = '5 m'
+MAIN_OPERATING_PAIR = 'BTCUSD'
+
+FT_MARKETPAIRS = [
+    {
+        'base_currency': {
+            'ticker': 'BTC',
+            'name': 'Bitcoin',
+        },
+        'quote_currency': {
+            'ticker': 'USD',
+            'name': 'dolla dolla bill',
+        },
+        'wallet_currency': 'USD',
+        'strategies': [
+            'chopfucker_v1',
+        ]
+    },
+    {
+        'base_currency': {
+            'ticker': 'ETH',
+            'name': 'etHerioeunm',
+        },
+        'quote_currency': {
+            'ticker': 'USD',
+            'name': 'dolla dolla bill',
+        },
+        'wallet_currency': 'USD',
+        'strategies': [
+            'strategy_v1',
+        ]
+    }
+]
+
+FT_TIMEFRAMES = [
+   '5 m', '15 m', '30 m', '1 h', '4 h', '1 D'
+]
+
+__all__ = [
+    CCAPI_KEY, CONSUMER_KEY, CONSUMER_SECRET,
+    ACCESS_TOKEN, ACCESS_TOKEN_SECRET,
+]

@@ -12,20 +12,28 @@ from typing import Dict, Callable, Any
 
 from flask import Flask, jsonify, request
 from flask.json import JSONEncoder
+from flask_cors import CORS
 from werkzeug.serving import make_server
+from playground import settings
 from playground.util import setup_logger
+
 BASE_URI = '/api/v1'
 
 
 class ApiServer:
     """Basic api server for REST calls."""
 
+    _worker = None
     def __init__(self, worker) -> None:
         """
         Init the api server, and init the super class RPC
         """
         self.logger = setup_logger(name=__name__)
         self.app = Flask(__name__)
+        CORS(self.app)
+
+        if worker:
+            self._worker = worker
 
         # Register application handling
         self.register_rest_rpc_urls()
@@ -41,8 +49,8 @@ class ApiServer:
         """
         Method that runs flask app in its own thread forever.
         """
-        rest_ip = '127.0.0.1'
-        rest_port = 3000
+        rest_ip = '0.0.0.0'
+        rest_port = 5566
 
         self.logger.info(f'Starting HTTP Server at {rest_ip}:{rest_port}')
 
@@ -80,6 +88,18 @@ class ApiServer:
         # testing
         self.app.add_url_rule(f'{BASE_URI}/ping', 'ping',
                               view_func=self._ping, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/warehouse_information', 'warehouse_information',
+                              view_func=self._wh_info, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/get_dataset/<pair>/<timeframe>/', 'get_dataset',
+                              view_func=self._get_dataset, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/wallet_balances', 'wallet_balances',
+                              view_func=self._balances, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/forwardtesting_shorts', 'forwardtesting_shorts',
+                              view_func=self._ft_shorts, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/forwardtesting_longs', 'forwardtesting_longs',
+                              view_func=self._ft_longs, methods=['GET'])
+        self.app.add_url_rule(f'{BASE_URI}/forwardtesting_results', 'forwardtesting_results',
+                              view_func=self._ft, methods=['GET'])
         # Actions to control the bot
         self.app.add_url_rule(f'{BASE_URI}/start', 'start',
                               view_func=self._start, methods=['POST'])
@@ -124,8 +144,52 @@ class ApiServer:
         msg = self._rpc_stopbuy()
         return self.rest_dump(msg)
 
+    def _balances(self):
+        """
+        simple wallet ping
+        """
+        _balances: list = self._worker.wallet.get_balances()
+        return self.rest_dump({"balances": _balances})
+
     def _ping(self):
         """
         simple poing version
         """
         return self.rest_dump({"status": "pong"})
+
+    def _ft(self):
+        """
+        get forwardtesting live results
+        """
+        _fts: list = [x._get_results() for x in self._worker.forwardtests]
+        return self.rest_dump(_fts)
+
+    def _ft_longs(self):
+        """
+        get forwardtesting live results
+        """
+        _fts: list = [x._get_longs() for x in self._worker.forwardtests]
+        return self.rest_dump(_fts)
+    
+    def _ft_shorts(self):
+        """
+        get forwardtesting live results
+        """
+        _fts: list = [x._get_shorts() for x in self._worker.forwardtests]
+        return self.rest_dump(_fts)
+
+    def _wh_info(self):
+        """
+        Get pairs with available datasets.
+        """
+        _pairs: list = [str(x) for x in self._worker.market_pairs]
+        _timeframes: list = [x for x in settings.WAREHOUSE_TIMEFRAMES]
+        return self.rest_dump({'pairs':_pairs, 'timeframes': _timeframes})
+    
+    def _get_dataset(self, pair=None, timeframe=None):
+        """
+        Get pairs with available datasets.
+        """
+        tf: str = timeframe.replace('_', ' ')
+        dataset = self._worker.wh.get_dataset(pair=pair, timeframe=tf, analysed=True).to_json()
+        return self.rest_dump({'data': dataset})

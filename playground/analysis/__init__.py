@@ -1,4 +1,4 @@
-__name__ = "playground"
+__name__ = "analysis"
 __title__ = "playground"
 __author__ = "github.com/murlokito"
 __description__ = __title__ + " Not your typical trading bot."
@@ -11,4 +11,6 @@ __status__ = "Prototype"
 __version__ = "0.0.1"
 
 
-from . import *
+from .analysis import Analyser
+from .correlation import *
+from .mrfi import MRFI
