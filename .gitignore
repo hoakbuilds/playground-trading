@@ -66,6 +66,7 @@ data/
 results/
 charts/
 keys.txt
+settings_local.py
 
 # general logs
 logs/
