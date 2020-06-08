@@ -1,4 +1,16 @@
 
+###############################################
+# ######### WAREHOUSE CONFIGURATION ######### #
+###############################################
+
+# ######### general parameters ############## #
+
+BASE_FOLDER = '/envs/playground-data/'
+DATASET_FOLDER = '{}/data/'.format(BASE_FOLDER)
+CHARTS_FOLDER = '{}/charts/'.format(BASE_FOLDER)
+BACKTESTS_CHARTS_FOLDER = CHARTS_FOLDER + '{}/'.format('backtests')
+FORWARDTESTS_CHARTS_FOLDER = CHARTS_FOLDER + '{}/'.format('forwardtests')
+
 # ############### API CONFIGURATIONS ############### #
 
 # ########## COIN MARKET CAP PRO API KEY ########### #

@@ -54,6 +54,11 @@ docs/_build/
 .vscode
 virtualenv/
 venv/
+# pipenv
+src/
+etc/
+share/
+pyvenv.cfg
 
 # Project specific for development etc
 
