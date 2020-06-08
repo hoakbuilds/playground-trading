@@ -13,7 +13,7 @@ from datetime import datetime as dt
 from dateutil.relativedelta import relativedelta
 from typing import Any, Dict, List, Callable, Optional
 from playground import enums
-from playground import settings as s
+from playground import settings_dep as s
 from playground.analysis import Analyser
 from playground.enums import RunMode
 from playground.cryptocompare import CryptoCompareAPI

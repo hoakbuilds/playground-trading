@@ -5,7 +5,12 @@ __credits__ = (__author__, )
 __license__ = "MIT"
 __email__ = "murlux@protonmail.com"
 
-from settings.settings_local import *
+from playground.settings import (
+    CCAPI_KEY, CCAPI_KEY_BTCUSD,
+    CCAPI_KEY_ETHUSD, CCAPI_KEY_XRPUSD,
+    CCAPI_KEY_ETHBTC, CCAPI_KEY_XRPBTC,
+    CCAPI_KEY_LTCBTC,
+)
 
 ###############################################
 # ########## LOGGING CONFIGURATION ########## #
@@ -190,9 +195,4 @@ FT_MARKETPAIRS = [
 
 FT_TIMEFRAMES = [
    '5 m', '15 m', '30 m', '1 h', '4 h', '1 D'
-]
-
-__all__ = [
-    CCAPI_KEY, CONSUMER_KEY, CONSUMER_SECRET,
-    ACCESS_TOKEN, ACCESS_TOKEN_SECRET,
 ]
