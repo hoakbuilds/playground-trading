@@ -21,13 +21,14 @@ class Analyser:
     """
     Basic class that defines and performs asset analysis.
     TODO: Define indicator additions and make these functional instead of static.
+    TODO-2: refactor this whole god damn thing please
     """
 
     def __init__(self, item: dict) -> None:
         """ Initialize. """
         dataset: pd.DataFrame = pd.DataFrame()
-        initial_file = s.DATASET_FOLDER + '{}_{}.csv'.format(item['pair'], item['timeframe']).replace(' ', '')
-        final_file = s.DATASET_FOLDER + '{}_{}_analyzed_v1.csv'.format(item['pair'], item['timeframe']).replace(' ', '')
+        initial_file = s.DATASET_FOLDER + '{}_{}.csv'.format(item.get('pair'), item.get('timeframe')).replace(' ', '')
+        final_file = s.DATASET_FOLDER + '{}_{}_analyzed_v1.csv'.format(item.get('pair'), item.get('timeframe')).replace(' ', '')
         try:
             dataset = pd.read_csv(initial_file, nrows=s.MAX_ROWS, error_bad_lines=False).set_index('time')
         except KeyError:
