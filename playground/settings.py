@@ -5,7 +5,7 @@ __credits__ = (__author__, )
 __license__ = "MIT"
 __email__ = "murlux@protonmail.com"
 
-from settings_local import *
+from settings.settings_local import *
 
 ###############################################
 # ########## LOGGING CONFIGURATION ########## #
