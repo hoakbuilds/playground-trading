@@ -39,7 +39,7 @@ class Analyser:
             logger.info('-------'*20 + str(item))
             logger.info(initial_file)
             logger.info(final_file)
-            logger.info('IDF ' + str(dataset))
+            #logger.info('IDF ' + str(dataset))
         
         dataset = self.analyse(item=item, df=dataset)
 
@@ -51,11 +51,15 @@ class Analyser:
 
     def analyse(self, item: dict, df: pd.DataFrame) -> pd.DataFrame:
         """ Method that performs needed logic before actually performing analysis. """
-
-        df = self.add_indicators(df=df)
-
-        df = self.process_indicators(df=df)
-
+        try:
+            df = self.add_indicators(df=df)
+            try:
+                df = self.process_indicators(df=df)
+            except Exception as e:
+                logger.info('Exception occurred while processing indicators in analysis :: pair: ' + str(item.get('pair')) + ' ' + str(item.get('timeframe')) + ' EXC: ' + str(e))
+        except Exception as e:
+            logger.info('Exception occurred while adding indicators in analysis :: pair: ' + str(item.get('pair')) + ' ' + str(item.get('timeframe')) + ' EXC: ' + str(e))
+        
         return df
 
     def crossover(
@@ -100,10 +104,10 @@ class Analyser:
         df['smrfi_os'] = df.smrfi < 30
         df['mrfi_ob'] = df.mrfi > 75
         df['mrfi_os'] = df.mrfi < 25
-        df['mfi_os'] = df.mrfi < 20
-        df['mfi_ob'] = df.mrfi > 80
-        df['rsi_os'] = df.mrfi < 30
-        df['rsi_ob'] = df.mrfi > 70
+        df['mfi_os'] = df.mfi < 20
+        df['mfi_ob'] = df.mfi > 80
+        df['rsi_os'] = df.rsi < 30
+        df['rsi_ob'] = df.rsi > 70
 
         # Stoch Cross SMRFI / MRFI
         df['slow_stoch_crossover_smrfi'] = self.crossover(df=df, crossing_col='slow_stoch', crossed_col='smrfi', new_col='slow_stoch_crossover_smrfi')
@@ -125,7 +129,7 @@ class Analyser:
         HLOCV = {key: df[key].values for key in df if key in cols}
 
         try:
-            df['volume'] = df['volumefrom'] * df['volumeto']
+            df['volume'] = df['volumeto']
         except:
             pass
 

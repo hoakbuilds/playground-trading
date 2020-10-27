@@ -36,6 +36,9 @@ playground = {editable = true,path = "."}
 celery = "*"
 pycli = "*"
 flask-cors = "*"
+flask-socketio = "*"
+gevent = "*"
+gevent-websocket = "*"
 
 [requires]
 python_version = "3.6"

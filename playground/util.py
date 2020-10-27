@@ -10,11 +10,13 @@ from dateutil.relativedelta import relativedelta
 from datetime import datetime
 from playground import enums
 
+
 def timestamp_to_date(timestamp=None):
     """
     Convert timestamp to datetime object
     """
     return datetime.fromtimestamp(int(timestamp))
+
 
 def setup_logger(name: str = None) -> logging.Logger:
     logger = logging.getLogger(name)
@@ -23,6 +25,7 @@ def setup_logger(name: str = None) -> logging.Logger:
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     )
     return logger
+
 
 class ArgumentDebugger:
     """

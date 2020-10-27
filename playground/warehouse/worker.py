@@ -1,3 +1,4 @@
+
 __title__ = "playground"
 __author__ = "murlux"
 __copyright__ = "Copyright 2019, " + __author__
@@ -5,118 +6,44 @@ __credits__ = (__author__, )
 __license__ = "MIT"
 __email__ = "murlux@protonmail.com"
 
-import logging
+import datetime
 import time
+import threading
+from typing import Callable
 from dateutil.relativedelta import relativedelta as rd
 from datetime import datetime as dt
 from playground import __version__, settings
-from playground.analysis import Analyser
-from playground.api_server import ApiServer
-from playground.enums import State
-from playground.pair import MarketPair
-from playground.simulation import ForwardTestSession
-from playground.util import setup_logger
+from playground.abstract import Worker
 from playground.util_ops import get_delta_callable_for_tf
-from playground.wallet import Wallet
-from playground.warehouse import Warehouse
-from playground import logic
-#from playground.strategy import Strategy
+from playground.warehouse.persistence import Warehouse
 
 
-class Worker:
+class WarehouseWorker(Worker):
     """Basic class for a main worker."""
 
-    state: State = State.STOPPED
 
-    api_srv: ApiServer = None
     wh: Warehouse = None
-    wallet: Wallet = None
 
-    forwardtests: list = None
+    _next_candle_time: datetime.datetime = None
 
-    __throttle: int = 5
     __last_analysis: dt = None
     __analysis_throttle: int = 60
     __startup_throttle: int = 5
 
-    def __init__(self):
+    def __init__(self, warehouse: Warehouse = None):
         """
-        Init all variables and objects the bot needs to work
+        Init all variables and objects the worker needs.
         """
-        self.logger = setup_logger(name=__name__)
-        self.logger.info('Initializing %s module.', __name__)
+        super().__init__(
+            name="WarehouseWorker",
+            work_func=self.work,
+            throttle_func=self._throttle_func,
+        )
 
-        self.wh = Warehouse()
+        if warehouse is None:
+            raise Exception("WarehouseWorker class needs a warehouse to control")
 
-        # Await the Warehouse being ready and updated
-        self._await_warehouse()
-
-        self.logger.info('Parsing forwardtests and their strategies..')
-        self.parse_forwardtesting()
-        self.logger.info('Setting up notifiers...')
-
-        # last thing to be up
-        self.api_srv = ApiServer(self)
-
-        # TODO: LIVE EXECUTION
-
-        #self.logger.info('Parsing strategies..')
-        #self.parse_strategies()
-
-        #self.wallet = Wallet()
-
-    def process_operating_forwardtests(self):
-        """
-        Process ongoing forwardtests.
-        """
-
-        for ft in self.forwardtests:
-            _dataset = self.wh.get_dataset(pair=ft.pair, timeframe=ft.tf, analysed=True,)
-            _candle = self.wh.get_latest_candle(pair=ft.pair, timeframe=ft.tf, analysed=True, closed=True)
-            ft.update_dataset(dataset=_dataset)
-            ft.process(today=_candle)
-
-    def parse_forwardtesting(self):
-        """
-        Process available forwardtests.
-        """
-        self.forwardtests = []
-
-        market_pairs: list = []
-
-        for pair in settings.FT_MARKETPAIRS:
-            market_pair = MarketPair(
-                config=pair
-            )
-            market_pairs.append(market_pair)
-
-        self.market_pairs = market_pairs
-
-        self.logger.info('Module found {} pairs for FT:  {}'.format(len(market_pairs), market_pairs))
-
-        for op_tf in settings.FT_TIMEFRAMES:
-            for pair in self.market_pairs:
-                self.logger.info('Launching FTS for: {} - {}'.format(pair, op_tf))
-                _dataset = self.wh.get_dataset(pair=pair, timeframe=op_tf, analysed=True,)
-                _candle = self.wh.get_latest_candle(pair=pair, timeframe=op_tf, analysed=True, closed=True) # analysed candle
-
-                for strategy in pair.strategies:
-                    strategy_function = getattr(logic, strategy)
-                    ft: ForwardTestSession = ForwardTestSession(
-                        data=_dataset,
-                        yesterday=_candle,
-                        initial_capital=settings.FT_INITIAL_CAPITAL[pair.wallet_currency],
-                        pair=pair,
-                        tf=op_tf,
-                        logic=strategy_function,
-                    )
-                self.forwardtests.append(ft)
-
-    def parse_strategies(self):
-        """
-        Process available strategies.
-        for strategy in settings.strategies.
-        """
+        self.wh = warehouse
 
     def print_pair_candles(self):
         """
@@ -225,65 +152,55 @@ class Worker:
                     except:
                         pass
 
-    def print_status(self):
-        """
-        Show the worker status, this includes wallet balances, positions, etc.
-        """
-
-        balances = self.wallet.get_balances()
-
-        for balance in balances:
-            self.logger.info(
-                '%s balance: %.2g | xbt : %.8g', balance.get('ticker'), balance.get('value'), balance.get('xbt_value'),
-            )
-
-    def run(self):
+    def work(self):
         """
         Run the worker loop.
         """
+        self.logger.info('Keeping Warehouse updated...')
 
-        while True:
+        # Make sure the warehouse is updated
+        self.wh.update()
 
-            # Make sure the warehouse is updated
-            self.wh._keep_updated()
+        self._await_warehouse()
+        
+        if self.wh.is_analysed():
+            self.print_pair_candles()
 
-            self._await_warehouse()
+        candle = self.wh.get_latest_candle(
+            pair=settings.MAIN_OPERATING_PAIR,
+            timeframe=settings.MINIMUM_OPERATING_TIMEFRAME,
+        )
+        self._next_candle_time = dt.fromtimestamp(candle.time)
             
-            if self.wh.is_analysed():
-                self.print_pair_candles()
+    def _throttle_func(self) -> int:
+        """
+        Returns an integer representing in seconds how long the warehouse will sleep.
+        """
+        # rd stands for relativedelta
+        rd_call: Callable = None
+        rd_args: dict = None
+        rd_call, rd_args = get_delta_callable_for_tf(tf=settings.MINIMUM_OPERATING_TIMEFRAME)
+        delta = rd_call(**rd_args)
+        next_candle = (self._next_candle_time + delta)
+        current_time = dt.now()
+        time_left = (next_candle - current_time) 
+        time_left = time_left.seconds + 1
 
-            #self.print_status()
-
-            self.process_operating_forwardtests()
-
-            candle = self.wh.get_latest_candle(
-                pair=settings.MAIN_OPERATING_PAIR,
-                timeframe=settings.MINIMUM_OPERATING_TIMEFRAME,
-            )
-            candle_time = dt.fromtimestamp(candle.time)
-            current_time = dt.now()
-
-            # rd stands for relativedelta
-            rd_call: Callable = None
-            rd_args: dict = None
-            rd_call, rd_args = get_delta_callable_for_tf(tf=settings.MINIMUM_OPERATING_TIMEFRAME)
-            delta = rd_call(**rd_args)
-            next_candle = (candle_time + delta)
-
-            time_left = (next_candle - current_time) 
-            time_left = time_left.seconds + 1
-            if settings.MINIMUM_OPERATING_TIMEFRAME == '1 m':
-                if time_left > 60:
-                    time_left = 1
-            elif settings.MINIMUM_OPERATING_TIMEFRAME == '5 m':
-                if time_left > 300:
-                    time_left = 5
-            self.logger.info(
-                'MIN: %s | Sleeping for %ds', settings.MINIMUM_OPERATING_TIMEFRAME, time_left,
-            )
-            time.sleep(time_left)
+        if settings.MINIMUM_OPERATING_TIMEFRAME == '1 m':
+            if time_left > 60:
+                time_left = 1
+        elif settings.MINIMUM_OPERATING_TIMEFRAME == '5 m':
+            if time_left > 300:
+                time_left = 5
+        self.logger.info(
+            'MIN: %s | Sleeping for %ds | Active threads: %s', settings.MINIMUM_OPERATING_TIMEFRAME, time_left, str(threading.active_count())
+        )
+        return int(time_left)
 
     def _await_warehouse(self):
+        """
+        Awaits until the warehouse has gone from READY to ANALYSED.
+        """
 
         while not self.wh.is_ready():
             time.sleep(self.__startup_throttle)

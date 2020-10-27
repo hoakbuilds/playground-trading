@@ -15,9 +15,12 @@ class State(Enum):
     """
     Bot application states
     """
-    RUNNING = 1
+    EXIT = -1
+    STARTING = 0
+    READY = 1
     STOPPED = 2
-    RELOAD_CONF = 3
+    RUNNING = 3
+    RELOAD_CONF = 4
 
 
 class RunMode(Enum):
@@ -32,6 +35,7 @@ class RunMode(Enum):
     PLOT = "plot"
     OTHER = "other"
 
+
 class TradingMode(Enum):
     """
     Specification of different trading modes (spot, margin)
@@ -39,12 +43,14 @@ class TradingMode(Enum):
     SPOT = 1
     MARGIN = 2
 
+
 class QuoteCurrency(Enum):
     """
     Specification of different wallet types
     """
     USD = "USD"
     EUR = "EUR"
+
 
 class Timeframe(Enum):
     """

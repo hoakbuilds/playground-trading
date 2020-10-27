@@ -7,15 +7,11 @@ __email__ = "murlux@protonmail.com"
 
 import threading
 import time
-import logging
 import pandas as pd
 from datetime import datetime as dt
-from dateutil.relativedelta import relativedelta
 from typing import Any, Dict, List, Callable, Optional
-from playground import enums
 from playground import settings as s
 from playground.analysis import Analyser
-from playground.enums import RunMode
 from playground.cryptocompare import CryptoCompareAPI
 from playground.pair import MarketPair
 from playground.util import (
@@ -28,9 +24,10 @@ from playground.util_ops import (
     get_cc_callable_by_time,
 )
 
+
 class Warehouse:
     """
-    Basic warehouse/persistence/db.
+    A csv-based warehousing absolute unit.
     """
 
     # Operating Logic
@@ -39,10 +36,10 @@ class Warehouse:
     analysed: bool = False
 
     # Assets on which to operate and check for missing and outdated datasets on startup
-    market_pairs: list = None
-    missing_sets: list = None
-    missing_analysed_sets: list = None
-    outdated_sets: list = None
+    market_pairs: List = None
+    missing_sets: List = None
+    missing_analysed_sets: List = None
+    outdated_sets: List = None
 
     # Logging attributes
     _verbose: bool = None
@@ -52,7 +49,7 @@ class Warehouse:
     __throttle: int = 2
     __rate_throttle: int = 1
 
-    def __init__(self, mode: RunMode = RunMode.DRY_RUN) -> None:
+    def __init__(self) -> None:
         """
         Initialize the Warehouse object with the settings.
         """
@@ -60,7 +57,6 @@ class Warehouse:
         self.logger.info('Initializing %s module.', __name__)
 
         self._parse_settings()
-
         self._parse_running_pairs()
 
         self.missing_sets = self._check_missing_datasets()
@@ -92,8 +88,6 @@ class Warehouse:
             # Only analyse the ones we detected earlier for less startup time
         
         self.set_ready()
-
-        self.logger.info('Warehouse ready. Mode: %s', mode)
 
     def get_latest_candle(
         self, pair: MarketPair = None, timeframe: str = '', analysed: bool = False, closed: bool = False,
@@ -129,7 +123,7 @@ class Warehouse:
 
         return _dataset.iloc[0]
 
-    def get_dataset(self, pair: MarketPair = None, timeframe: str = '', analysed: bool = False) -> pd.DataFrame:
+    def get_dataset(self, pair: MarketPair = None, timeframe: str = '', analysed: bool = False, limit: int = None) -> pd.DataFrame:
         """
         Fetch the dataset up to the maximum number of rows as per config.
 
@@ -137,9 +131,10 @@ class Warehouse:
 
         If `analysed` is passed, function will return the latest candle from the dataset post-analysis.
 
-        :param `pair`: `MarketPair`
-        :param `timeframe`: `str`
-        :param `analysed`: `bool`
+        :param `pair`: MarketPair that represents the pair to fetch
+        :param `timeframe`: str that represents the timeframe, i.e. '5m', '1D'
+        :param `analysed`: bool that represents if the dataset is analyzed or not
+        :param `limit`: int that represents the limit of datapoints
         """
 
         dataset_file: str = ''
@@ -148,13 +143,24 @@ class Warehouse:
         else:
             dataset_file = s.DATASET_FOLDER + '{}_{}.csv'.format(pair, timeframe).replace(' ', '')
 
-        try:
-            _dataset = self._get_dataset_from_file(filename=dataset_file, rows=s.MAX_ROWS)
-        except FileNotFoundError:
-            dataset_file = s.DATASET_FOLDER + '{}_{}_analyzed.csv'.format(pair, timeframe).replace(' ', '')
-            _dataset = self._get_dataset_from_file(filename=dataset_file, rows=s.MAX_ROWS)
-        except KeyError:
-            _dataset = self._get_dataset_from_file(filename=dataset_file)
+        _dataset: pd.DataFrame = None
+        
+        if limit is None:
+            try:
+                _dataset = self._get_dataset_from_file(filename=dataset_file, rows=s.MAX_ROWS)
+            except FileNotFoundError:
+                dataset_file = s.DATASET_FOLDER + '{}_{}_analyzed.csv'.format(pair, timeframe).replace(' ', '')
+                _dataset = self._get_dataset_from_file(filename=dataset_file, rows=s.MAX_ROWS)
+            except KeyError:
+                _dataset = self._get_dataset_from_file(filename=dataset_file, rows=s.MAX_ROWS)
+        else:
+            try:
+                _dataset = self._get_dataset_from_file(filename=dataset_file, rows=limit)
+            except FileNotFoundError:
+                dataset_file = s.DATASET_FOLDER + '{}_{}_analyzed.csv'.format(pair, timeframe).replace(' ', '')
+                _dataset = self._get_dataset_from_file(filename=dataset_file, rows=limit)
+            except KeyError:
+                _dataset = self._get_dataset_from_file(filename=dataset_file, rows=limit)
 
         return _dataset
 
@@ -179,8 +185,6 @@ class Warehouse:
 
             for helper in helpers:
                 helper.join()
-
-        self.logger.info('Warehouse updated..')
 
         self.outdated_sets = []
         self.set_updated()
@@ -238,13 +242,11 @@ class Warehouse:
 
         self.set_analysed()
 
-    def _keep_updated(self) -> None:
+    def update(self) -> None:
         """
         This method needs to be called in a loop by a worker.
         """
         
-        self.logger.info('Keeping Warehouse updated...')
-
         self.outdated_sets = self._check_outdated_datasets()
 
         if len(self.outdated_sets) == 0:
@@ -285,27 +287,31 @@ class Warehouse:
         # Fetch new data
         data = api_call(**api_args)
         new_data: list = data.get('Data', None)
-        new_dataset: pd.DataFrame = pd.DataFrame(new_data)
-        new_dataset['datetime'] = [dt.fromtimestamp(d) for d in new_dataset.time]
-        new_dataset['timestamp'] = [d for d in new_dataset.time]
-        new_dataset = new_dataset.set_index('time')
 
-        # Fetch our disk dataset
-        dataset_file = s.DATASET_FOLDER + '{}_{}.csv'.format(
-            config.get('pair'), config.get('timeframe')).replace(' ', '')
-        disk_dataset = self._get_dataset_from_file(filename=dataset_file,)
-        disk_dataset = disk_dataset.set_index('time')
+        if new_data:
+            new_dataset: pd.DataFrame = pd.DataFrame(new_data)
+            new_dataset['datetime'] = [dt.fromtimestamp(d) for d in new_dataset.time]
+            new_dataset['timestamp'] = [d for d in new_dataset.time]
+            new_dataset = new_dataset.set_index('time')
 
-        # Join the data together and overwrite existing timeperiods with newest data
-        newest_dataset: pd.DataFrame = disk_dataset.copy(deep=True)
-        newest_dataset = newest_dataset.append(new_dataset, sort=False)
-        newest_dataset = newest_dataset.drop_duplicates(subset='timestamp', keep='last')
-        newest_dataset.sort_index(inplace=True, ascending=False)
+            # Fetch our disk dataset
+            dataset_file = s.DATASET_FOLDER + '{}_{}.csv'.format(
+                config.get('pair'), config.get('timeframe')).replace(' ', '')
+            disk_dataset = self._get_dataset_from_file(filename=dataset_file,)
+            disk_dataset = disk_dataset.set_index('time')
 
-        # Save the new data
-        newest_dataset.to_csv(dataset_file)
-        if self._extra_verbose:
-            self.logger.info('Updated dataset %s %s.', config.get('pair'), config.get('timeframe').replace(' ', ''))
+            # Join the data together and overwrite existing timeperiods with newest data
+            newest_dataset: pd.DataFrame = disk_dataset.copy(deep=True)
+            newest_dataset = newest_dataset.append(new_dataset, sort=False)
+            newest_dataset = newest_dataset.drop_duplicates(subset='timestamp', keep='last')
+            newest_dataset.sort_index(inplace=True, ascending=False)
+
+            # Save the new data
+            newest_dataset.to_csv(dataset_file)
+            if self._extra_verbose:
+                self.logger.info('Updated dataset %s %s.', config.get('pair'), config.get('timeframe').replace(' ', ''))
+        else:
+            self._build_dataset(config=config)
 
         return Analyser(item=config)
 
@@ -387,16 +393,16 @@ class Warehouse:
                     else:
                         break
 
-            dataset.sort_index(inplace=True, ascending=False)
-            dataset['datetime'] = [dt.fromtimestamp(d) for d in dataset.index]
-            dataset['timestamp'] = [d for d in dataset.index]
+                dataset.sort_index(inplace=True, ascending=False)
+                dataset['datetime'] = [dt.fromtimestamp(d) for d in dataset.index]
+                dataset['timestamp'] = [d for d in dataset.index]
 
-            if self._extra_verbose:
-                self.logger.info('DataFrame: ' + str(dataset.shape))
+                if self._extra_verbose:
+                    self.logger.info('DataFrame: ' + str(dataset.shape))
 
-            dataset_file = s.DATASET_FOLDER + '{}_{}.csv'.format(config['pair'], config['timeframe']).replace(' ', '')
-            dataset.to_csv(dataset_file)
-            break
+                dataset_file = s.DATASET_FOLDER + '{}_{}.csv'.format(config['pair'], config['timeframe']).replace(' ', '')
+                dataset.to_csv(dataset_file)
+                break
 
         return Analyser(item=config)
 
@@ -495,11 +501,12 @@ class Warehouse:
 
         return missing_pair_tf
         
-    def _parse_settings(self,) -> None:
+    def _parse_settings(self) -> None:
         """
         Parse the warehouse's settings, such as logging, storage, etc..
         """
 
+        self.logger.info('Parsing module settings.')
         self._verbose = s.WAREHOUSE_VERBOSITY
         self._extra_verbose = s.WAREHOUSE_EXTRA_VERBOSITY
 
@@ -508,7 +515,7 @@ class Warehouse:
         Parse the warehouse's running pairs and act accordingly.
         """
 
-        self.logger.info('Configuring module.')
+        self.logger.info('Parsing running pairs..')
 
         market_pairs: list = []
 
@@ -548,6 +555,7 @@ class Warehouse:
                         dataset.sort_index(inplace=True, ascending=True)
                     else:
                         dataset = pd.read_csv(filename, nrows=rows, error_bad_lines=False)
+                        dataset.sort_index(inplace=True, ascending=False)
                 else:
                     dataset = pd.read_csv(filename, error_bad_lines=False)
             except FileNotFoundError as ex:

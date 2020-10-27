@@ -49,12 +49,12 @@ def strategy_v1(
         today = last_candle
 
     logger.info('Processing logic...')
-    tn = TwitterNotifier(logger=logger)
+    #tn = TwitterNotifier(logger=logger)
 
     if account.no != 0 and account.check_delta_since(delta=DELTA_CANDLES):
-        strategy_v1_aux(today, name, logger, account, tn, _tts=_tts, _simple_tts=_simple_tts)
+        strategy_v1_aux(today, name, logger, account, tn=None, _tts=_tts, _simple_tts=_simple_tts)
     elif account.no == 0:
-        strategy_v1_aux(today, name, logger, account, tn, _tts=_tts, _simple_tts=_simple_tts)
+        strategy_v1_aux(today, name, logger, account, tn=None, _tts=_tts, _simple_tts=_simple_tts)
 
     logger.info('------------'*10 )
 
@@ -64,47 +64,57 @@ def strategy_v1_aux(today, name, logger, account, tn, _tts, _simple_tts):
     signal: bool = False
 
     if today.ema20_50_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 20/50 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema20, ema2=today.ema50,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 20/50 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema20, ema2=today.ema50,
+            )
     if today.ema20_100_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 20/100 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema20, ema2=today.ema100,
-        )
+        if tn:
+            tn.post_crossover(
+                    ft_name=_simple_tts, today=today, reason='EMA 20/100 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema20, ema2=today.ema100,
+                )
     if today.ema50_100_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema50, ema2=today.ema100,
-        )
+        if tn:
+            tn.post_crossover(
+                    ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema50, ema2=today.ema100,
+                )
     if today.ema100_200_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\ncome on baby!', ema1=today.ema50, ema2=today.ema100,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\ncome on baby!', ema1=today.ema50, ema2=today.ema100,
+            )
     if today.ema100_300_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\nCMON LFG', ema1=today.ema50, ema2=today.ema100,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\nCMON LFG', ema1=today.ema50, ema2=today.ema100,
+            )
 
     
     if today.ema50_20_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 50/20 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema50, ema2=today.ema20,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 50/20 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema50, ema2=today.ema20,
+            )
     if today.ema100_20_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 100/20 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema100, ema2=today.ema20,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 100/20 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema100, ema2=today.ema20,
+            )
     if today.ema100_50_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 100/50 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema100, ema2=today.ema50,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 100/50 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema100, ema2=today.ema50,
+            )
     if today.ema200_100_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 200/100 Crossover \n\nooo  sh', ema1=today.ema100, ema2=today.ema20,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 200/100 Crossover \n\nooo  sh', ema1=today.ema100, ema2=today.ema20,
+            )
     if today.ema300_100_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 300/100 Crossover \n\noH shIT g2g', ema1=today.ema100, ema2=today.ema50,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 300/100 Crossover \n\noH shIT g2g', ema1=today.ema100, ema2=today.ema50,
+            )
 
     # MRFI and SMRFI based logic
     if today.mrfi_ob == 1 and today.smrfi_ob == 1:
@@ -209,11 +219,12 @@ def strategy_v1_aux(today, name, logger, account, tn, _tts, _simple_tts):
             account.enter_position('long', entry_capital, entry_price)
 
 
-    if signal:  
-        tn.post_indicators(
-            ft_name=_simple_tts, rsi=today.rsi, mfi=today.mfi, mrfi=today.mrfi, smrfi=today.smrfi, ema20=today.ema20,
-            ema50=today.ema50, ema100=today.ema100,
-        )
+    if signal:
+        if tn:
+            tn.post_indicators(
+                ft_name=_simple_tts, rsi=today.rsi, mfi=today.mfi, mrfi=today.mrfi, smrfi=today.smrfi, ema20=today.ema20,
+                ema50=today.ema50, ema100=today.ema100,
+            )
 
 
 def chopfucker_v1(
@@ -259,9 +270,9 @@ def chopfucker_v1(
         today = last_candle
 
     logger.info('Processing logic...')
-    tn = TwitterNotifier(logger=logger)
+    #tn = TwitterNotifier(logger=logger)
 
-    chopfucker_v1_aux(today, name, logger, account, tn, _tts=_tts, _simple_tts=_simple_tts)
+    chopfucker_v1_aux(today, name, logger, account, tn=None, _tts=_tts, _simple_tts=_simple_tts)
 
     logger.info('------------'*10 )
 
@@ -271,47 +282,57 @@ def chopfucker_v1_aux(today, name, logger, account, tn, _tts, _simple_tts):
     signal: bool = False
 
     if today.ema20_50_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 20/50 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema20, ema2=today.ema50,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 20/50 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema20, ema2=today.ema50,
+            )
     if today.ema20_100_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 20/100 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema20, ema2=today.ema100,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 20/100 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema20, ema2=today.ema100,
+            )
     if today.ema50_100_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema50, ema2=today.ema100,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\nRUN-IT-BACK-TURBO-PLEB!', ema1=today.ema50, ema2=today.ema100,
+            )
     if today.ema100_200_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\ncome on baby!', ema1=today.ema50, ema2=today.ema100,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\ncome on baby!', ema1=today.ema50, ema2=today.ema100,
+            )
     if today.ema100_300_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\nCMON LFG', ema1=today.ema50, ema2=today.ema100,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 50/100 Crossover \n\nCMON LFG', ema1=today.ema50, ema2=today.ema100,
+            )
 
     
     if today.ema50_20_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 50/20 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema50, ema2=today.ema20,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 50/20 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema50, ema2=today.ema20,
+            )
     if today.ema100_20_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 100/20 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema100, ema2=today.ema20,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 100/20 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema100, ema2=today.ema20,
+            )
     if today.ema100_50_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 100/50 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema100, ema2=today.ema50,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 100/50 Crossover \n\nSPOOL IT DOWN TURBO?!', ema1=today.ema100, ema2=today.ema50,
+            )
     if today.ema200_100_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 200/100 Crossover \n\nooo  sh', ema1=today.ema100, ema2=today.ema20,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 200/100 Crossover \n\nooo  sh', ema1=today.ema100, ema2=today.ema20,
+            )
     if today.ema300_100_cross:
-        tn.post_crossover(
-            ft_name=_simple_tts, today=today, reason='EMA 300/100 Crossover \n\noH shIT g2g', ema1=today.ema100, ema2=today.ema50,
-        )
+        if tn:
+            tn.post_crossover(
+                ft_name=_simple_tts, today=today, reason='EMA 300/100 Crossover \n\noH shIT g2g', ema1=today.ema100, ema2=today.ema50,
+            )
 
     # MRFI and SMRFI based logic
     if today.slow_stoch_crossunder_smrfi and today.smrfi > 65:
@@ -364,8 +385,9 @@ def chopfucker_v1_aux(today, name, logger, account, tn, _tts, _simple_tts):
                 )
             account.enter_position('long', entry_capital, entry_price)
 
-    if signal:  
-        tn.post_indicators(
-            ft_name=_simple_tts, rsi=today.rsi, mfi=today.mfi, mrfi=today.mrfi, smrfi=today.smrfi, ema20=today.ema20,
-            ema50=today.ema50, ema100=today.ema100,
-        )
+    if signal:
+        if tn:
+            tn.post_indicators(
+                ft_name=_simple_tts, rsi=today.rsi, mfi=today.mfi, mrfi=today.mrfi, smrfi=today.smrfi, ema20=today.ema20,
+                ema50=today.ema50, ema100=today.ema100,
+            )

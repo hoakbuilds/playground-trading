@@ -72,7 +72,7 @@ class CryptoCompareAPI:
                     url += '{},'.format(item)
 
         if self.exchange:
-            url += '&e={}'.format(exchange)
+            url += '&e={}'.format(self.exchange)
 
         if self._verbose:
             self.logger.info('Requesting CryptoCompare:: {} ::'.format(url))
@@ -108,7 +108,7 @@ class CryptoCompareAPI:
         self, symbol: str, all_data: bool = False, limit: int = 1, aggregate: int = 1, timestamp: dt = None, comp_symbol: str = None,
     ):
         if timestamp:
-            url = 'https://min-api.cryptocompare.com/data/histohday?fsym={}&limit=2000&aggregate={}&toTs={}'\
+            url = 'https://min-api.cryptocompare.com/data/histoday?fsym={}&limit=2000&aggregate={}&toTs={}'\
                     .format(symbol.upper(), aggregate, timestamp)
         else:
             url = 'https://min-api.cryptocompare.com/data/histoday?fsym={}&limit={}&aggregate={}'\

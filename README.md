@@ -10,7 +10,7 @@
 # playground
 [![Build Status](https://api.cirrus-ci.com/github/murlokito/playground.svg)](https://cirrus-ci.com/github/murlokito/playground)
 
-An OpenSSL wizard (GUI), created in the context of IT Security subject, at Universidade da Beira Inteiror (UBI) . Open sourced for the greater good.
+A playground for cryptocurrency technical analysis.
 
 ## Getting Started
 

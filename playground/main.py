@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """
-Main Freqtrade bot script.
+Main playground script.
 Read the documentation to know what cli arguments you need.
 """
-import logging
 from typing import Any, List
 
 from playground import __title__, __version__
-from playground.worker import Worker
+from playground.integrator import PlaygroundIntegrator
 from playground.util import setup_logger
 
 
@@ -28,10 +27,10 @@ def main(sysargv: List[str] = None) -> None:
 
     return_code: Any = 1
 
-    worker = Worker()
+    pg = PlaygroundIntegrator()
 
     try:
-        worker.run()
+        pg.run()
     except KeyboardInterrupt:
         logger.info('SIGINT received, aborting ...')
         """
