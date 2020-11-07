@@ -1,3 +1,4 @@
+__name__ = "messaging"
 __title__ = "playground"
 __author__ = "github.com/murlokito"
 __description__ = __title__ + " Not your typical trading bot."
@@ -8,3 +9,11 @@ __email__ = "murlux@protonmail.com"
 __status__ = "Prototype"
 
 __version__ = "0.0.1"
+
+from .message import Message
+from .stream import Stream
+from .payload import Payload
+
+__all__ = [
+    Message, Stream, Payload,
+]

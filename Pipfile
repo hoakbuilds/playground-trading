@@ -39,6 +39,10 @@ flask-cors = "*"
 flask-socketio = "*"
 gevent = "*"
 gevent-websocket = "*"
+jsonschema = "*"
+flasgger = "*"
+websockets = "*"
+tornado = "*"
 
 [requires]
 python_version = "3.6"

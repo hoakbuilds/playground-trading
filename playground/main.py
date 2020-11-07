@@ -3,36 +3,48 @@
 Main playground script.
 Read the documentation to know what cli arguments you need.
 """
+
+import sys
 from typing import Any, List
 
 from playground import __title__, __version__
 from playground.integrator import PlaygroundIntegrator
 from playground.util import setup_logger
+from playground.config import PlaygroundConfig
+from playground.commands import parse_arguments
 
 
 def main(sysargv: List[str] = None) -> None:
     """
-    This function will initiate the bot and start the trading loop.
+    This function will initiate the playground.
     :return: None
     """
-
-    logger = setup_logger(name='{}.v{}'.format(__title__, __version__))
-    logger.info('Launching environment..\n'  +
-        '______  __       ______   __  __   ______   ______   ______   __  __   __   __   ______      \n' +
-        '/\  == \/\ \     /\  __ \ /\ \_\ \ /\  ___\ /\  == \ /\  __ \ /\ \/\ \ /\ "-.\ \ /\  __-.    \n' +
-        '\ \  _-/\ \ \____\ \  __ \\ \____ \\ \ \__ \\\\ \  __< \ \ \/\ \\\\ \ \_\ \\\\ \ \-.  \\\\ \ \/\ \   \n' +
-        ' \ \_\   \ \_____\\\\ \_\ \_\\/\_____\\ \_____\\\\ \_\ \_\\\\ \_____\\\\ \_____\\\\ \_\\\\"\_\\\\ \____-\'   \n' +
-        '  \/_/    \/_____/ \/_/\/_/ \/_____/ \/_____/ \/_/ /_/ \/_____/ \/_____/ \/_/ \/_/ \/₀.₁.₀/ /\n',
-    )
-
     return_code: Any = 1
 
-    pg = PlaygroundIntegrator()
+    logger = setup_logger(name='{}.v{}'.format(__title__, __version__))
+    logger.info('Launching playground environment..\n'  +
+        '           __                                             __\n' +
+        '    ____  / /___ ___  ______ __________  __  ______  ____/ /\n' +
+        '   / __ \/ / __ `/ / / / __ `/ ___/ __ \/ / / / __ \/ __  / \n' +
+        '  / /_/ / / /_/ / /_/ / /_/ / /  / /_/ / /_/ / / / / /_/ /  \n' +
+        ' / .___/_/\__,_/\__, /\__, /_/   \____/\__,_/_/ /_/\__,_/   \n' +
+        '/_/            /____//____/                         ₀.₁.₁   \n'
+    )
 
+    pg_config: PlaygroundConfig = None
+    pg: PlaygroundIntegrator = None
+    pg_config: PlaygroundConfig = parse_arguments(logger=logger, sysargv=sysargv)
+
+    if pg_config is not None:
+        pg = PlaygroundIntegrator(config=pg_config)
+    else:
+        logger.warning('WARNING: No playground config set, running with deprecated default settings.')
+        pg = PlaygroundIntegrator()
     try:
         pg.run()
     except KeyboardInterrupt:
         logger.info('SIGINT received, aborting ...')
+        return_code = 0
         """
         for ft in worker.forwardtests:
             if len(ft.data) != 0:
@@ -40,9 +52,9 @@ def main(sysargv: List[str] = None) -> None:
                 #ft.chart()
         """
         # TODO: stuff related with livetrading
-
-        return_code = 0
+    
+    return return_code
 
 
 if __name__ == '__main__':
-    main()
+    main(sysargv=sys.argv)

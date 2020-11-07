@@ -8,17 +8,20 @@ __email__ = "murlux@protonmail.com"
 import pandas as pd
 from datetime import datetime as dt
 from dateutil.relativedelta import relativedelta
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, Any, Optional, Callable, Tuple
 from playground import enums
 from playground.cryptocompare import CryptoCompareAPI
 
 
-def get_delta_callable_for_tf(tf: str, ) -> (Callable, Callable):
+def get_delta_callable_for_tf(tf: str = None) -> Optional[Tuple[Callable, Dict[str, Any]]]:
     """
     Returns a relativedelta callable and it's arguments for the timeframe.
 
     param: tf -- the timeframe object.
     """
+
+    if tf is None:
+        return None
 
     api_call: Callable = None
     api_args: dict = None
@@ -58,7 +61,7 @@ def get_delta_callable_for_tf(tf: str, ) -> (Callable, Callable):
     return (api_call, api_args)
 
 
-def get_limit_for_candle_delta(candle: pd.DataFrame, config: Dict[str, Any]) -> int:
+def get_limit_for_candle_delta(candle: pd.DataFrame = None, config: Dict[str, Any] = None) -> Optional[int]:
     """
     Returns the amount of periods since the candle has closed.
 
@@ -66,13 +69,17 @@ def get_limit_for_candle_delta(candle: pd.DataFrame, config: Dict[str, Any]) -> 
 
     param: candle -- the last candle of the running object.
     """
-    tf = config.get('timeframe', None)
 
-    # rd stands for relativedelta
-    rd_call: Callable = None
-    rd_args: dict = None
-    rd_call, rd_args = get_delta_callable_for_tf(tf=tf)
-    delta = rd_call(**rd_args)
+    if candle is None:
+        return None
+
+    if config is None:
+        return None
+    
+    tf: str = None
+    tf = config.get('timeframe', None)
+    if tf is None:
+        return None
 
     current_time = dt.now()
     candle_time = dt.fromtimestamp(candle.timestamp)
@@ -108,7 +115,7 @@ def get_limit_for_candle_delta(candle: pd.DataFrame, config: Dict[str, Any]) -> 
     return int(limit)
 
 
-def get_cc_callable_by_time(config: Dict[str, Any], candle: pd.DataFrame, cc: CryptoCompareAPI = None) -> (Callable, Callable):
+def get_cc_callable_by_time(config: Dict[str, Any] = None, candle: pd.DataFrame = None, cc: CryptoCompareAPI = None) -> Optional[Tuple[Callable, Dict[str, Any]]]:
     """
     Returns a direct CCAPI callable and it's arguments for the passed candle based on time since passed.
 
@@ -119,12 +126,25 @@ def get_cc_callable_by_time(config: Dict[str, Any], candle: pd.DataFrame, cc: Cr
     param: cc -- the cryptocompareapi object.
     """
 
-    api_call: Callable = None
-    api_args: dict = None
+    if config is None:
+        return None
+
+    if candle is None:
+        return None
+
+    tf: str = None
 
     tf = config.get('timeframe', None)
+    if tf is None:
+        return None
 
-    limit: int = get_limit_for_candle_delta(config=config, candle=candle)
+    api_call: Callable = None
+    api_args: dict = None
+    limit: int = None
+
+    limit = get_limit_for_candle_delta(config=config, candle=candle)
+    if limit is None:
+        return None
 
     if tf in str(enums.LOW_TIMEFRAMES):
         api_call = cc.minute_price_historical
@@ -151,7 +171,7 @@ def get_cc_callable_by_time(config: Dict[str, Any], candle: pd.DataFrame, cc: Cr
     return (api_call, api_args)
 
 
-def get_cc_callable_by_def(config: Dict[str, Any], cc: CryptoCompareAPI = None) -> (Callable, Callable):
+def get_cc_callable_by_def(config: Dict[str, Any] = None, cc: CryptoCompareAPI = None) -> Optional[Tuple[Callable, Dict[str, Any]]]:
     """
     Returns a direct CCAPI callable and it's arguments for the passed timeframe definition.
 
@@ -159,10 +179,19 @@ def get_cc_callable_by_def(config: Dict[str, Any], cc: CryptoCompareAPI = None) 
 
     param: cc -- the cryptocompareapi object.
     """
+    if config is None:
+        return None
+
+    if cc is None:
+        return None
+
     api_call: Callable = None
     api_args: dict = None
+    tf: str = None
 
     tf = config.get('timeframe', None)
+    if tf is None:
+        return None
 
     if tf in str(enums.LOW_TIMEFRAMES):
         api_call = cc.minute_price_historical

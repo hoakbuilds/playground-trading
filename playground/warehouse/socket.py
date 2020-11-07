@@ -8,14 +8,14 @@ __email__ = "murlux@protonmail.com"
 import pandas as pd
 from typing import List
 from playground import settings
-from playground.abstract import SocketServer, SocketEvent
+from playground.abstract.socketio import SocketIOServer, SocketIOEvent
 from playground.warehouse.persistence import Warehouse
 
 WAREHOUSE_SOCKET_IP = '0.0.0.0'
-WAREHOUSE_SOCKET_PORT = 6677
+WAREHOUSE_SOCKET_PORT = 1200
 
 
-class WarehouseSocket(SocketServer):
+class WarehouseSocket(SocketIOServer):
     """Warehouse Socket Server to push events."""
     
     # Warehouse reference to be able to access warehouse info
@@ -41,23 +41,23 @@ class WarehouseSocket(SocketServer):
         # Register application handling
         self.register_warehouse_events()
     
-    def Events(self) -> List[SocketEvent]:
+    def Events(self) -> List[SocketIOEvent]:
         """
         Function that returns the List of Event type objects that this socket pushes.
         """
         return list(
             [
-                SocketEvent(
+                SocketIOEvent(
                     name='warehouse_information',
                     handler=self._wh_info,
                     namespace='/'
                 ),
-                SocketEvent(
+                SocketIOEvent(
                     name='get_dataset',
                     handler=self._get_dataset,
                     namespace='/'
                 ),
-                SocketEvent(
+                SocketIOEvent(
                     name='get_dataset_limit',
                     handler=self._get_dataset_limit,
                     namespace='/'

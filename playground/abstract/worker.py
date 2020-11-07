@@ -45,10 +45,10 @@ class Worker:
         self.logger = setup_logger(name=self.name)
         self.logger.info('Initializing %s component.', self.name)
 
-        if work_func is None:
-            raise Exception("Worker class needs `throttle_func` param to work")
-        
-        self._throttlefunc = throttle_func
+        if throttle_func is None:
+            self.logger.info('Worker class got no `throttle_func` param, worker will not sleep between work cycles.')
+        else:
+            self._throttlefunc = throttle_func
 
         if work_func is None:
             raise Exception("Worker class needs `work_func` param to work")
@@ -103,9 +103,11 @@ class Worker:
                 self._work()
 
                 throttle: int = self._get_throttle()
-                self.logger.info('Worker is sleeping for %ss.', throttle)
 
-                time.sleep(throttle)
+                if throttle != 0:
+                    self.logger.info('Worker is sleeping for %ss.', throttle)
+
+                    time.sleep(throttle)
 
             self.logger.info('Worker is stopping.')
             self.state = State.STOPPED
@@ -165,4 +167,7 @@ class Worker:
         """
         Fetch throttle time.
         """
-        return self._throttlefunc()        
+        if self._throttlefunc is None:
+            return 0
+
+        return self._throttlefunc()

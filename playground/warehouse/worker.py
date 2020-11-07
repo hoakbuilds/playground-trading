@@ -21,7 +21,6 @@ from playground.warehouse.persistence import Warehouse
 class WarehouseWorker(Worker):
     """Basic class for a main worker."""
 
-
     wh: Warehouse = None
 
     _next_candle_time: datetime.datetime = None

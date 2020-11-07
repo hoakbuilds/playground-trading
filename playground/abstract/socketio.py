@@ -15,7 +15,7 @@ from playground.util import setup_logger
 BASE_URI = '/api/v1'
 
 
-class SocketEvent:
+class SocketIOEvent:
     """Basic class to specify socket events so the base SocketServer can plug them."""
     name: str = None
     handler: Callable = None
@@ -36,8 +36,8 @@ class SocketEvent:
         self.handler = handler
 
 
-class SocketServer:
-    """Basic server for websockets."""
+class SocketIOServer:
+    """Basic server for socketio."""
     
     name: str = None
     app: Flask = None
@@ -124,7 +124,7 @@ class SocketServer:
         self.socket.on_event("connect", self._base_connection_handler, namespace="/")
         self.socket.on_event("disconnect", self._base_disconnection_handler, namespace="/")
 
-    def register_socket_events(self, events: List[SocketEvent]):
+    def register_socket_events(self, events: List[SocketIOEvent]):
         """
         Registers flask-socketio events that are handled by the socket server.
         :param events: is a list of events of type `SocketEvent` from the same module.

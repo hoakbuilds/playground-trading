@@ -5,62 +5,101 @@ __credits__ = (__author__, )
 __license__ = "MIT"
 __email__ = "murlux@protonmail.com"
 
-import time
 import pandas as pd
-from datetime import datetime
+from queue import Queue
+from logging import Logger
 from talib import abstract as abstract_ta
 from talib import MA_Type
 from playground import settings as s
 from playground.analysis.mrfi import MRFI
 from playground.util import setup_logger
 
-logger = setup_logger(name=__name__)
 
 
-class Analyser:
+class Analysis:
     """
-    Basic class that defines and performs asset analysis.
-    TODO: Define indicator additions and make these functional instead of static.
-    TODO-2: refactor this whole god damn thing please
+    Base class that defines and performs asset analysis.
     """
 
-    def __init__(self, item: dict) -> None:
+    logger: Logger = None
+
+    dataset: pd.DataFrame = None
+    df: pd.DataFrame = None
+
+    initial_file: str = None
+    final_file: str = None
+    
+    read_queue: Queue = None
+
+    def __init__(self, item: dict = None) -> None:
         """ Initialize. """
-        dataset: pd.DataFrame = pd.DataFrame()
-        initial_file = s.DATASET_FOLDER + '{}_{}.csv'.format(item.get('pair'), item.get('timeframe')).replace(' ', '')
-        final_file = s.DATASET_FOLDER + '{}_{}_analyzed_v1.csv'.format(item.get('pair'), item.get('timeframe')).replace(' ', '')
+
+        self.logger = setup_logger(name=__name__)
+
+        self.read_queue = Queue()
+
+        if item is not None:
+            self.run(item=item)
+
+    def run(self, item: dict = None) -> None:
+        """
+        Run it.
+        """
+        self.prepare_dataset(item=item)
+        self.analyse(df=self.dataset)
+        self.save_dataset(item=item)
+
+    def get_read_queue(self) -> Queue:
+        """
+        Get the reading Queue.
+        """
+        return self.read_queue
+
+    def prepare_dataset(self, item: dict) -> None:
+        """
+        Prepares the Analyser and Dataset for analysis.
+        """
+        self.initial_file = s.DATASET_FOLDER + '{}_{}.csv'.format(item.get('pair'), item.get('timeframe')).replace(' ', '')
+        self.final_file = s.DATASET_FOLDER + '{}_{}_analyzed_v1.csv'.format(item.get('pair'), item.get('timeframe')).replace(' ', '')
+
         try:
-            dataset = pd.read_csv(initial_file, nrows=s.MAX_ROWS, error_bad_lines=False).set_index('time')
+            self.dataset = pd.read_csv(self.initial_file, nrows=s.MAX_ROWS, error_bad_lines=False).set_index('time')
         except KeyError:
-            dataset = pd.read_csv(initial_file, error_bad_lines=False).set_index('time')
-        dataset.sort_index(inplace=True, ascending=True)
+            self.dataset = pd.read_csv(self.initial_file, error_bad_lines=False).set_index('time')
+        self.dataset.sort_index(inplace=True, ascending=True)
 
         if s.ANALYSIS_VERBOSITY:
-            logger.info('-------'*20 + str(item))
-            logger.info(initial_file)
-            logger.info(final_file)
-            #logger.info('IDF ' + str(dataset))
-        
-        dataset = self.analyse(item=item, df=dataset)
+            self.logger.info('-------'*20 + str(item))
+            self.logger.info(self.initial_file)
+            self.logger.info(self.final_file)
+            #self.logger.info('IDF ' + str(dataset))
 
+    def save_dataset(self, item: dict) -> None:
+        """
+        Save the dataset to disk.
+        """
         if s.ANALYSIS_VERBOSITY:
-            logger.info( '{} - {} - DATASET FINAL -\n {} '.format(item['pair'], item['timeframe'], str(dataset)) + '-------'*20)
+            self.logger.info( '{} - {} - DATASET FINAL -\n {} '.format(item['pair'], item['timeframe'], str(self.df)) + '-------'*20)
 
-        dataset.sort_index(inplace=True, ascending=False)
-        dataset.to_csv(final_file)
+        self.df.sort_index(inplace=True, ascending=False)
+        self.df.to_csv(self.final_file)
 
-    def analyse(self, item: dict, df: pd.DataFrame) -> pd.DataFrame:
+    def analyse(self, df: pd.DataFrame) -> pd.DataFrame:
         """ Method that performs needed logic before actually performing analysis. """
+        
+        self.df = self.add_indicators(df=df)
+        self.df = self.process_indicators(df=self.df)
+        """
         try:
             df = self.add_indicators(df=df)
             try:
                 df = self.process_indicators(df=df)
             except Exception as e:
-                logger.info('Exception occurred while processing indicators in analysis :: pair: ' + str(item.get('pair')) + ' ' + str(item.get('timeframe')) + ' EXC: ' + str(e))
+                logger.exception('Exception occurred while processing indicators in analysis :: pair: ' + str(item.get('pair')) + ' ' + str(item.get('timeframe')), exc_info=e)
         except Exception as e:
-            logger.info('Exception occurred while adding indicators in analysis :: pair: ' + str(item.get('pair')) + ' ' + str(item.get('timeframe')) + ' EXC: ' + str(e))
-        
-        return df
+            logger.exception('Exception occurred while adding indicators in analysis :: pair: ' + str(item.get('pair')) + ' ' + str(item.get('timeframe')), exc_info=e)
+        """
+        return self.df
 
     def crossover(
         self, df: pd.DataFrame = None, crossing_col: str = '', crossed_col: str = '', new_col: str = '',
@@ -109,16 +148,21 @@ class Analyser:
         df['rsi_os'] = df.rsi < 30
         df['rsi_ob'] = df.rsi > 70
 
-        # Stoch Cross SMRFI / MRFI
+        # Stoch Crossover SMRFI / MRFI
         df['slow_stoch_crossover_smrfi'] = self.crossover(df=df, crossing_col='slow_stoch', crossed_col='smrfi', new_col='slow_stoch_crossover_smrfi')
         df['slow_stoch_crossover_mrfi'] = self.crossover(df=df, crossing_col='slow_stoch', crossed_col='mrfi', new_col='slow_stoch_crossover_mrfi')
         df['slow_stoch14_crossover_smrfi'] = self.crossover(df=df, crossing_col='slow_stoch_sma14', crossed_col='smrfi', new_col='slow_stoch14_crossover_smrfi')
         df['slow_stoch14_crossover_mrfi'] = self.crossover(df=df, crossing_col='slow_stoch_sma14', crossed_col='mrfi', new_col='slow_stoch14_crossover_mrfi')
+        df['slow_stoch26_crossover_smrfi'] = self.crossover(df=df, crossing_col='slow_stoch_sma26', crossed_col='smrfi', new_col='slow_stoch26_crossover_smrfi')
+        df['slow_stoch26_crossover_mrfi'] = self.crossover(df=df, crossing_col='slow_stoch_sma26', crossed_col='mrfi', new_col='slow_stoch26_crossover_mrfi')
 
+        # Stoch Crossunder SMRFI / MRFI
         df['slow_stoch_crossunder_smrfi'] = self.crossover(df=df, crossing_col='smrfi', crossed_col='slow_stoch', new_col='slow_stoch_crossunder_smrfi')
         df['slow_stoch_crossunder_mrfi'] = self.crossover(df=df, crossing_col='mrfi', crossed_col='slow_stoch', new_col='slow_stoch_crossunder_mrfi')
         df['slow_stoch14_crossunder_smrfi'] = self.crossover(df=df, crossing_col='smrfi', crossed_col='slow_stoch_sma14', new_col='slow_stoch14_crossunder_smrfi')
         df['slow_stoch14_crossunder_mrfi'] = self.crossover(df=df, crossing_col='mrfi', crossed_col='slow_stoch_sma14', new_col='slow_stoch14_crossunder_mrfi')
+        df['slow_stoch26_crossunder_smrfi'] = self.crossover(df=df, crossing_col='smrfi', crossed_col='slow_stoch_sma26', new_col='slow_stoch26_crossunder_smrfi')
+        df['slow_stoch26_crossunder_mrfi'] = self.crossover(df=df, crossing_col='mrfi', crossed_col='slow_stoch_sma26', new_col='slow_stoch26_crossunder_mrfi')
 
         return df
 
@@ -154,6 +198,7 @@ class Analyser:
         df['slowd'] = slowd
         df['slow_stoch'] = (slowk + slowd)/2
         df['slow_stoch_sma14'] = df.slow_stoch.rolling(window=14).mean()
+        df['slow_stoch_sma26'] = df.slow_stoch.rolling(window=26).mean()
 
         # Relative Strength Index
         rsi = abstract_ta.RSI(df, timeperiod=14)

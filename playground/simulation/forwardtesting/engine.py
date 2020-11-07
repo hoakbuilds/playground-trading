@@ -16,7 +16,7 @@ from playground import __version__, settings
 from playground.analysis import Analyser
 from playground.api_server import ApiServer
 from playground.enums import State
-from playground.pair import MarketPair
+from playground.models.pair import MarketPair
 from playground.simulation import ForwardTestSession
 from playground.util import setup_logger
 from playground.util_ops import get_delta_callable_for_tf

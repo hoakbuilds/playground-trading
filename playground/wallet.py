@@ -7,7 +7,7 @@ __email__ = "murlux@protonmail.com"
 
 from playground import settings
 from playground.cryptocompare import CryptoCompareAPI
-from playground.pair import Currency
+from playground.models.pair import Currency
 from playground.util import setup_logger
 
 

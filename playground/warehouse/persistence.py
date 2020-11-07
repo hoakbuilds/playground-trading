@@ -5,15 +5,17 @@ __credits__ = (__author__, )
 __license__ = "MIT"
 __email__ = "murlux@protonmail.com"
 
+from queue import Queue
 import threading
 import time
 import pandas as pd
 from datetime import datetime as dt
 from typing import Any, Dict, List, Callable, Optional
 from playground import settings as s
-from playground.analysis import Analyser
+from playground.messaging import Message, Stream, Payload
+from playground.analysis import Analysis
 from playground.cryptocompare import CryptoCompareAPI
-from playground.pair import MarketPair
+from playground.models.pair import MarketPair
 from playground.util import (
     setup_logger,
     timestamp_to_date,
@@ -34,6 +36,7 @@ class Warehouse:
     ready: bool = False
     updated: bool = False
     analysed: bool = False
+    producer_queue: Queue = None
 
     # Assets on which to operate and check for missing and outdated datasets on startup
     market_pairs: List = None
@@ -47,7 +50,10 @@ class Warehouse:
 
     # Throttle attributes due to warehouse cycle and API limits etc
     __throttle: int = 2
-    __rate_throttle: int = 1
+
+    # Safety
+    ___read_lock: threading.RLock = None
+    ___update_lock: threading.RLock = None
 
     def __init__(self) -> None:
         """
@@ -55,6 +61,10 @@ class Warehouse:
         """
         self.logger = setup_logger(name=__name__)
         self.logger.info('Initializing %s module.', __name__)
+
+        self.___read_lock = threading.RLock()
+        self.___update_lock = threading.RLock()
+
 
         self._parse_settings()
         self._parse_running_pairs()
@@ -89,6 +99,13 @@ class Warehouse:
         
         self.set_ready()
 
+        self.producer_queue = Queue()
+    
+    def get_producer_queue(self) -> None:
+        """
+        """
+        return self.producer_queue
+
     def get_latest_candle(
         self, pair: MarketPair = None, timeframe: str = '', analysed: bool = False, closed: bool = False,
     ) -> pd.DataFrame:
@@ -114,7 +131,10 @@ class Warehouse:
 
         try:
             _dataset = self._get_dataset_from_file(filename=dataset_file, rows=1)
-        except:
+        except Exception as exc:
+            self.logger.exception(
+                msg="Warehouse found exception trying to read file. Pair: " + pair + " " + timeframe + "Analysed: " + str(analysed) +  "Limit: " + str(limit),
+                exc_info=exc)
             dataset_file = s.DATASET_FOLDER + '{}_{}_analyzed.csv'.format(pair, timeframe).replace(' ', '')
             _dataset = self._get_dataset_from_file(filename=dataset_file, rows=s.MAX_ROWS)
 
@@ -148,18 +168,34 @@ class Warehouse:
         if limit is None:
             try:
                 _dataset = self._get_dataset_from_file(filename=dataset_file, rows=s.MAX_ROWS)
-            except FileNotFoundError:
+            except FileNotFoundError as exc:
+                self.logger.exception(
+                    msg="Warehouse found exception trying to read file."
+                    " Pair: "+ pair + " " + timeframe + "Analysed: " + str(analysed) +  "Limit: " + str(limit),
+                    exc_info=exc)
                 dataset_file = s.DATASET_FOLDER + '{}_{}_analyzed.csv'.format(pair, timeframe).replace(' ', '')
                 _dataset = self._get_dataset_from_file(filename=dataset_file, rows=s.MAX_ROWS)
-            except KeyError:
+            except KeyError as exc:
+                self.logger.exception(
+                    msg="Warehouse found exception trying to read file."
+                    " Pair: "+ pair + " " + timeframe + "Analysed: " + str(analysed) +  "Limit: " + str(limit),
+                    exc_info=exc)
                 _dataset = self._get_dataset_from_file(filename=dataset_file, rows=s.MAX_ROWS)
         else:
             try:
                 _dataset = self._get_dataset_from_file(filename=dataset_file, rows=limit)
-            except FileNotFoundError:
+            except FileNotFoundError as exc:
+                self.logger.exception(
+                    msg="Warehouse found exception trying to read file."
+                    " Pair: "+ pair + " " + timeframe + "Analysed: " + str(analysed) +  "Limit: " + str(limit),
+                    exc_info=exc)
                 dataset_file = s.DATASET_FOLDER + '{}_{}_analyzed.csv'.format(pair, timeframe).replace(' ', '')
                 _dataset = self._get_dataset_from_file(filename=dataset_file, rows=limit)
-            except KeyError:
+            except KeyError as exc:
+                self.logger.exception(
+                    msg="Warehouse found exception trying to read file."
+                    " Pair: "+ pair + " " + timeframe + "Analysed: " + str(analysed) +  "Limit: " + str(limit),
+                    exc_info=exc)
                 _dataset = self._get_dataset_from_file(filename=dataset_file, rows=limit)
 
         return _dataset
@@ -170,7 +206,6 @@ class Warehouse:
         """
 
         if not self.is_updated():
-            self.set_updating()
             helpers: list = []
 
             for item in self.outdated_sets:
@@ -202,13 +237,20 @@ class Warehouse:
         self.set_analysing()
 
         if not datasets:
+            payload: Dict[str, Any] = []
             for pair in self.market_pairs:
                 for tf in s.WAREHOUSE_TIMEFRAMES:
                     item = {
                         'pair': pair,
                         'timeframe': tf
                     }
-                    helper = threading.Thread(target=Analyser, args=[item])
+                    if self.producer_queue is not None:
+                        self.logger.info('Producing message to re-analyse dataset for {} {}..'.format(
+                            item.get('pair'), item.get('timeframe').replace(' ', '')
+                            )
+                        )
+                        payload = payload.append(item)
+                    helper = threading.Thread(target=Analysis, args=[item])
                     helper.start()
                     helpers.append(helper)
                     if self._verbose:
@@ -216,14 +258,34 @@ class Warehouse:
                             item.get('pair'), item.get('timeframe').replace(' ', '')
                             )
                         )
+            if self.producer_queue is not None:
+                message = Message(
+                    stream=Stream(
+                        module_name='analysis',
+                        name='analysis-socket',
+                        socket_ip='0.0.0.0',
+                        socket_port=2100,
+                    ),
+                    payload=Payload(
+                        raw={'items': payload}
+                    )
+                )
+                self.producer_queue.put(message)
         else:
+            payload: Dict[str, Any] = []
             for pair in datasets:
                 for tf in s.WAREHOUSE_TIMEFRAMES:
                     item = {
                         'pair': pair,
                         'timeframe': tf
                     }
-                    helper = threading.Thread(target=Analyser, args=[item])
+                    if self.producer_queue is not None:
+                        self.logger.info('Producing message to analyse dataset for {} {}..'.format(
+                            item.get('pair'), item.get('timeframe').replace(' ', '')
+                            )
+                        )
+                        payload = payload.append(item)
+                    helper = threading.Thread(target=Analysis, args=[item])
                     helper.start()
                     helpers.append(helper)
                     if self._verbose:
@@ -231,7 +293,19 @@ class Warehouse:
                             item.get('pair'), item.get('timeframe').replace(' ', '')
                             )
                         )
-
+            if self.producer_queue is not None:
+                message = Message(
+                    stream=Stream(
+                        module_name='analysis',
+                        name='analysis-socket',
+                        socket_ip='0.0.0.0',
+                        socket_port=2100,
+                    ),
+                    payload=Payload(
+                        raw={'items': payload}
+                    )
+                )
+                self.producer_queue.put(message)
         for helper in helpers:
             helper.join()
 
@@ -246,7 +320,6 @@ class Warehouse:
         """
         This method needs to be called in a loop by a worker.
         """
-        
         self.outdated_sets = self._check_outdated_datasets()
 
         if len(self.outdated_sets) == 0:
@@ -256,6 +329,7 @@ class Warehouse:
             self.logger.info('Datasets outdated: {}'.format(self.outdated_sets))
             self.set_updating()
             self.update_datasets()
+            #self.set_analysing()
             self.logger.info('Warehouse successfully updated.')
 
     def _update_dataset(self, config: Dict[str, Any]) -> None:
@@ -294,6 +368,7 @@ class Warehouse:
             new_dataset['timestamp'] = [d for d in new_dataset.time]
             new_dataset = new_dataset.set_index('time')
 
+            self.___update_lock.acquire(blocking=True)
             # Fetch our disk dataset
             dataset_file = s.DATASET_FOLDER + '{}_{}.csv'.format(
                 config.get('pair'), config.get('timeframe')).replace(' ', '')
@@ -310,10 +385,31 @@ class Warehouse:
             newest_dataset.to_csv(dataset_file)
             if self._extra_verbose:
                 self.logger.info('Updated dataset %s %s.', config.get('pair'), config.get('timeframe').replace(' ', ''))
+            self.___update_lock.release()
         else:
             self._build_dataset(config=config)
 
-        return Analyser(item=config)
+        if self.producer_queue is not None:                    
+            self.logger.info('Producing message to analyse dataset for {} {}..'.format(
+                config.get('pair'), config.get('timeframe').replace(' ', '')
+                )
+            )
+            payload = []
+            payload = payload.append(config)
+            message = Message(
+                stream=Stream(
+                    module_name='analysis',
+                    name='analysis-socket',
+                    socket_ip='0.0.0.0',
+                    socket_port=2100,
+                ),
+                payload=Payload(
+                    raw={'items': payload}
+                )
+            )
+            self.producer_queue.put(message)
+
+        return Analysis(item=config)
 
     def _build_dataset(self, config: Dict[str, Any]) -> pd.DataFrame:
         """
@@ -338,7 +434,6 @@ class Warehouse:
 
         initial_data: dict = None
         data: dict = None
-        tf: str = config.get('timeframe')
 
         api_call: Callable = None
         api_args: dict = None
@@ -348,8 +443,8 @@ class Warehouse:
         while True:
             try:
                 data = api_call(**api_args)
-            except Exception as ex:
-                self.logger.info('Connection with API is unstable. :: %s', ex)
+            except Exception as exc:
+                self.logger.exception('Warehouse found exception: Connection with API is unstable. :: %s', config, exc_info=exc)
                 time.sleep(self.__throttle)
                 continue
 
@@ -368,8 +463,8 @@ class Warehouse:
                     }
                     try:
                         data = api_call(**api_args)
-                    except Exception as ex:
-                        self.logger.info('Connection with API is unstable. :: %s', ex)
+                    except Exception as exc:
+                        self.logger.exception('Warehouse found exception: Connection with API is unstable. :: %s', config, exc_info=exc)
                         time.sleep(self.__throttle)
                         continue
 
@@ -389,10 +484,11 @@ class Warehouse:
                                 self.logger.info('Dataset Length: ' + str(len(dataset)))
                         else:
                             break
-                        time.sleep(self.__rate_throttle)
+                        time.sleep(self.__throttle)
                     else:
                         break
 
+                self.___update_lock.acquire(blocking=True)
                 dataset.sort_index(inplace=True, ascending=False)
                 dataset['datetime'] = [dt.fromtimestamp(d) for d in dataset.index]
                 dataset['timestamp'] = [d for d in dataset.index]
@@ -402,9 +498,30 @@ class Warehouse:
 
                 dataset_file = s.DATASET_FOLDER + '{}_{}.csv'.format(config['pair'], config['timeframe']).replace(' ', '')
                 dataset.to_csv(dataset_file)
+                self.___update_lock.release()
                 break
+    
+        if self.producer_queue is not None:
+            self.logger.info('Producing message to analyse dataset for {} {}..'.format(
+                config.get('pair'), config.get('timeframe').replace(' ', '')
+                )
+            )
+            payload = []
+            payload = payload.append(config)
+            message = Message(
+                stream=Stream(
+                    module_name='analysis',
+                    name='analysis-socket',
+                    socket_ip='0.0.0.0',
+                    socket_port=2100,
+                ),
+                payload=Payload(
+                    raw={'items': payload}
+                )
+            )
+            self.producer_queue.put(message)
 
-        return Analyser(item=config)
+        return Analysis(item=config)
 
     def _build_missing_datasets(self) -> None:
         """
@@ -486,9 +603,8 @@ class Warehouse:
                 else:
                     dataset_file = s.DATASET_FOLDER + '{}_{}.csv'.format(pair, tf).replace(' ', '')
 
-                if not self._get_dataset_from_file(
-                        filename=dataset_file, exists=True,
-                    ):
+                exists = self._dataset_exists(filename=dataset_file)
+                if exists is not None and not exists:
                     missing_pair_tf.append({
                         'pair': pair,
                         'timeframe': tf
@@ -529,24 +645,52 @@ class Warehouse:
 
         self.market_pairs = market_pairs
 
+    def _dataset_exists(self, filename: str = None) -> bool:
+        """
+        Check if the dataset exists.
+
+        Parameter `filename` is mandatory.
+
+        :param `filename`: `str`
+        """
+
+        if filename is not None:
+            dataset: pd.DataFrame = pd.DataFrame()
+            self.___read_lock.acquire(blocking=True)
+
+            try:
+                dataset = pd.read_csv(filename)
+            except FileNotFoundError as exc:
+                self.logger.exception("Warehouse found excecption trying to read file. Filename: " + filename, exc_info=exc)
+                self.___read_lock.release()
+                return False
+            
+            if dataset.empty:
+                self.___read_lock.release()
+                return False
+            else:
+                self.___read_lock.release()
+                return True
+
+        return None
+
     def _get_dataset_from_file(
-        self, filename: str = None, exists: bool = False, rows: int = 0,
+        self, filename: str = None, rows: int = 0,
     ) -> Optional[pd.DataFrame]:
         """
         Fetch the dataset from a file with `filename`.
 
         Parameter `filename` is mandatory.
 
-        If `exists` is passed, function will only check if the file exists or not and return the dataset.
         If `rows` is passed, function will only read `nrows=rows` from the file, default is 5000 as per settings.
 
         :param `filename`: `str`
-        :param `exists`: `bool`
         :param `rows`: `int`
         """
 
-        if filename:
+        if filename is not None:
             dataset: pd.DataFrame = pd.DataFrame()
+            self.___read_lock.acquire(blocking=True)
 
             try:
                 if rows != 0:
@@ -558,15 +702,12 @@ class Warehouse:
                         dataset.sort_index(inplace=True, ascending=False)
                 else:
                     dataset = pd.read_csv(filename, error_bad_lines=False)
-            except FileNotFoundError as ex:
+            except FileNotFoundError as exc:
+                self.logger.exception("Warehouse found exception trying to read file. Filename: " + filename, exc_info=exc)
+                self.___read_lock.release()
                 return None
 
-            if exists:
-                if dataset.empty:
-                    return None
-                else:
-                    return True
-
+            self.___read_lock.release()
             return dataset
 
         return None

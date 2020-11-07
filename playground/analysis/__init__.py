@@ -11,6 +11,14 @@ __status__ = "Prototype"
 __version__ = "0.0.1"
 
 
-from .analysis import Analyser
+from .analysis import Analysis
+from .worker import AnalysisWorker
 from .correlation import *
 from .mrfi import MRFI
+
+from .integrator import AnalysisIntegrator
+from .consumer import AnalysisSocketConsumer
+
+__all__ = [
+    AnalysisIntegrator, AnalysisSocketConsumer, MRFI,
+]

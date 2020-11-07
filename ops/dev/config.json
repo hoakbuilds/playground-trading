@@ -1,0 +1,286 @@
+{
+    "name": "Default Playground Config",
+    "mode": "dev",
+    "modules": [
+        "bridge",
+        "warehouse",
+        "analysis",
+        "simulation"
+    ],
+    "bridge": {
+        "name": "BridgeIntegrator",
+        "module_name": "bridge",
+        "flows": [
+            {
+                "name": "warehouse-analysis",
+                "source": {
+                    "module_name": "warehouse",
+                    "name": "warehouse-producer",
+                    "key": "k3y-h3r3-w4r3h0us3-4n4ly515"
+                },
+                "target": {
+                    "module_name": "analysis",
+                    "name": "analysis-consumer",
+                    "key": "k3y-h3r3-w4r3h0us3-4n4ly515"
+                }
+            },
+            {
+                "name": "analysis-simulation",
+                "source": {
+                    "module_name": "analysis",
+                    "name": "analysis-producer",
+                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+                },
+                "target": {
+                    "module_name": "analysis",
+                    "name": "simulation-consumer",
+                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+                }
+            }
+        ],
+        "api": {
+            "name": "WarehouseAPI",
+            "rest_ip": "0.0.0.0",
+            "rest_port": 5677 
+        }
+    },
+    "warehouse": {
+        "name": "WarehouseIntegrator",
+        "module_name": "warehouse",
+        "warehouse": {
+            "name": "Warehouse",
+            "throttle": 2,
+            "market_pairs": [
+                {
+                    "base_currency": {
+                        "ticker": "BTC",
+                        "name": "Bitcoin"
+                    },
+                    "quote_currency": {
+                        "ticker": "USD",
+                        "name": "dolla dolla bill"
+                    },
+                    "apikey": "5fc1c96274a3a9eba10d40a32bbc748a0bfc202394dd687bc2029610998017f6"
+                },
+                {
+                    "base_currency": {
+                        "ticker": "ETH",
+                        "name": "etHerioeunm"
+                    },
+                    "quote_currency": {
+                        "ticker": "USD",
+                        "name": "dolla dolla bill"
+                    },
+                    "apikey": "5e7ee58e47f8aaf0dbb3b099a2442339875fae236f11bb50a2381305b69c6aa2"
+                },
+                {
+                    "base_currency": {
+                        "ticker": "LTC",
+                        "name": "litro coin"
+                    },
+                    "quote_currency": {
+                        "ticker": "USD",
+                        "name": "dolla dolla bill"
+                    },
+                    "apikey": "e094138ed189dce1310f0928d510cc182f43ca1f5b39a669b0757031f9b90f1d"
+                },
+                {
+                    "base_currency": {
+                        "ticker": "WAVES",
+                        "name": "ondinhas"
+                    },
+                    "quote_currency": {
+                        "ticker": "USD",
+                        "name": "dolla dolla bill"
+                    },
+                    "apikey": "e094138ed189dce1310f0928d510cc182f43ca1f5b39a669b0757031f9b90f1d"
+                },
+                {
+                    "base_currency": {
+                        "ticker": "LINK",
+                        "name": "chaine linque"
+                    },
+                    "quote_currency": {
+                        "ticker": "USD",
+                        "name": "dolla dolla bill"
+                    },
+                    "apikey": "0e4e13fc6e4cb73b6d1f17f95eb82c23a955bb58a2f8fb03c236fbf5eea229f7"
+                },
+                {
+                    "base_currency": {
+                        "ticker": "ETH",
+                        "name": "etHerioeunm"
+                    },
+                    "quote_currency": {
+                        "ticker": "BTC",
+                        "name": "Bitcoin"
+                    },
+                    "apikey": "bc03e3ad3106b6ba61d8212f95f313a555792e0400e504f1d3d772de9d8dd7ae"
+                },
+                {
+                    "base_currency": {
+                        "ticker": "LTC",
+                        "name": "litro coin"
+                    },
+                    "quote_currency": {
+                        "ticker": "BTC",
+                        "name": "Bitcoin"
+                    },
+                    "apikey": "11b6d7e06f59f6bbee70e19d277c99307fb3a0c21b047c76f96b64990efa9991"
+                },
+                {
+                    "base_currency": {
+                        "ticker": "LINK",
+                        "name": "chaine linque"
+                    },
+                    "quote_currency": {
+                        "ticker": "BTC",
+                        "name": "Bitcoin"
+                    },
+                    "apikey": "052e4236632051777a00122609e5d7ec3570074f90ddad863ca9399aef722cca"
+                }
+
+            ],
+            "operating_timeframes": [
+                "1 m", "5 m","15 m", "30 m", "1 h", "4 h", "1 D", "3 D", "1 W", "1 M"
+            ]
+        },
+        "api": {
+            "name": "WarehouseAPI",
+            "rest_ip": "0.0.0.0",
+            "rest_port": 5677 
+        },
+        "socket": {
+            "name": "WarehouseSocket",
+            "socket_ip": "0.0.0.0",
+            "socket_port": 6789
+        },
+        "worker": {
+            "name": "WarehouseWorker"
+        },
+        "producer": {
+            "name": "WarehouseProducer",
+            "flow": {
+                "name": "warehouse-analysis",
+                "source": {
+                    "module_name": "warehouse",
+                    "name": "warehouse-producer",
+                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+                },
+                "target": {
+                    "module_name": "analysis",
+                    "name": "analysis-consumer",
+                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+                }
+            },
+            "produce_stream": {
+                "module_name": "warehouse",
+                "name": "warehouse-producer",
+                "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+            }
+        }
+    },
+    "analysis": {
+        "name": "AnalysisIntegrator",
+        "module_name": "analysis",
+        "analysis": {
+            "name": "Analysis"
+        },
+        "api": {
+            "name": "AnalysisAPI",
+            "rest_ip": "0.0.0.0",
+            "rest_port": 5678 
+        },
+        "socket": {
+            "name": "AnalysisSocket",
+            "socket_ip": "0.0.0.0",
+            "socket_port": 6790 
+        },
+        "worker": {
+            "name": "AnalysisWorker"
+        },
+        "consumer": {
+            "name": "AnalysisConsumer",
+            "flow": {
+                "name": "warehouse-analysis",
+                "source": {
+                    "module_name": "warehouse",
+                    "name": "warehouse-producer",
+                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+                },
+                "target": {
+                    "module_name": "analysis",
+                    "name": "analysis-consumer",
+                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+                }
+            },
+            "consume_stream": {
+                "module_name": "warehouse",
+                "name": "warehouse-producer",
+                "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+            }
+        },
+        "producer": {
+            "name": "AnalysisProducer",
+            "flow": {
+                "name": "analysis-simulation",
+                "source": {
+                    "module_name": "analysis",
+                    "name": "analysis-producer",
+                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+                },
+                "target": {
+                    "module_name": "simulation",
+                    "name": "simulation-consumer",
+                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+                }
+            },
+            "produce_stream": {
+                "module_name": "analysis",
+                "name": "analysis-producer",
+                "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+            }
+        }
+    },
+    "simulation": {
+        "name": "SimulationIntegrator",
+        "module_name": "simulation",
+        "simulation": {
+            "name": "SimulationEngine"
+        },
+        "api": {
+            "name": "SimulationAPI",
+            "rest_ip": "0.0.0.0",
+            "rest_port": 5679 
+        },
+        "socket": {
+            "name": "SimulationSocket",
+            "socket_ip": "0.0.0.0",
+            "socket_port": 6791 
+        },
+        "worker": {
+            "name": "SimulationWorker"
+        },
+        "consumer": {
+            "name": "SimulationConsumer",
+            "flow": {
+                "name": "analysis-simulation",
+                "source": {
+                    "module_name": "analysis",
+                    "name": "analysis-producer",
+                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+                },
+                "target": {
+                    "module_name": "simulation",
+                    "name": "simulation-consumer",
+                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+                }
+            },
+            "consume_stream": {
+                "module_name": "analysis",
+                "name": "analysis-producer",
+                "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
+            }
+        }
+    }
+}

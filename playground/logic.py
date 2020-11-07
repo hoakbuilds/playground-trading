@@ -2,7 +2,7 @@ import logging
 import pandas as pd
 from playground.simulation import Period, Account
 from playground.notifiers import TwitterNotifier
-from playground.pair import MarketPair
+from playground.models.pair import MarketPair
 
 DELTA_CANDLES = 10
 

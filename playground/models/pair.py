@@ -25,8 +25,20 @@ class Currency:
 
 
     def __init__(self, config: Dict[str, Any]) -> None:
-        self.ticker = config.get('ticker', '')
-        self.name = config.get('name', '')
+        """
+        Init from json
+
+        :param config: json dict of the class
+        """
+        ticker = config.get('ticker', '')
+        name = config.get('name', '')
+        if name is None:
+            raise Exception("Currency class needs `name` param")
+
+        if ticker is None:
+            raise Exception("Currency class needs `ticker` param")
+        self.ticker = ticker
+        self.name = name
 
     def __str__(self) -> str:
         """String representation."""
@@ -54,16 +66,29 @@ class MarketPair:
     # This value represents the market pair's applied strategies
     strategies: list = None
 
+    # Pairs with their exclusive key
     _api_key: str = None
 
     def __init__(self, config: Dict[str, Any]) -> None:
-        # TODO exchange class
-        self.exchange = config.get('exchange', '')
-        self._api_key = config.get('apikey', None)
-        self.base_currency = Currency(config = config.get('base_currency', None))
-        self.quote_currency = Currency(config = config.get('quote_currency', None))
+        """
+        Init from json
+
+        :param config: json dict of the class
+        """
+        base_currency = config.get('base_currency', '')
+        quote_currency = config.get('quote_currency', '')
+        if base_currency is None:
+            raise Exception("MarketPair class needs `base_currency` param")
+
+        if quote_currency is None:
+            raise Exception("MarketPair class needs `quote_currency` param")
+
+        self.base_currency = Currency(config=base_currency)
+        self.quote_currency = Currency(config=quote_currency)
         self.wallet_currency = config.get('wallet_currency', '')
         self.strategies = config.get('strategies')
+        self.exchange = config.get('exchange', '')
+        self._api_key = config.get('apikey', None)
         if self._api_key:
             logger.info('Pair {}{} with exclusive CCAPI_KEY:: {}'.format(self.base_currency, self.quote_currency, self._api_key))
 
@@ -74,3 +99,10 @@ class MarketPair:
     def __repr__(self) -> str:
         """String representation."""
         return '{}/{}'.format(self.base_currency, self.quote_currency)
+
+    @staticmethod
+    def from_json(json: Dict[str, Any] = None):
+        """
+        Return the object from json
+        """
+        return MarketPair(config=json)

@@ -31,3 +31,4 @@ class SimulationIntegrator:
         """
         Starts the engines.
         """
+        self.logger.info("Running the SimulationIntegrator...")

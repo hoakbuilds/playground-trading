@@ -119,8 +119,12 @@ class APIServer:
         try:
             self.srv = make_server(self._rest_ip, self._rest_port, self.app)
             self.srv.serve_forever()
+        except KeyboardInterrupt:
+            self.logger.exception("HTTP Server terminating.")
+            self.cleanup()
         except Exception:
             self.logger.exception("HTTP Server failed to start.")
+            self.cleanup()
 
     def rest_dump(self, return_value):
         """ Helper function to jsonify object for a webserver """
@@ -174,15 +178,13 @@ class APIServer:
         """
         Handler for /start.
         """
-        msg = self._rpc_start()
-        return self.rest_dump(msg)
+        return self.rest_dump()
 
     def _stop(self):
         """
         Handler for /stop.
         """
-        msg = self._rpc_stop()
-        return self.rest_dump(msg)
+        return self.rest_dump()
 
     def _ping(self):
         """

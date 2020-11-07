@@ -8,7 +8,7 @@ __email__ = "murlux@protonmail.com"
 from enum import Enum
 
 """
-This file is used to define state constants for the bot's operation.
+This file is used to define state constants for the systems operation.
 """
 
 class State(Enum):
@@ -30,7 +30,7 @@ class RunMode(Enum):
     """
     LIVE = "live"
     PAPER = "paper"
-    DRY_RUN = "dry_run"
+    FORDWARDTEST = "forwardtest"
     BACKTEST = "backtest"
     PLOT = "plot"
     OTHER = "other"
@@ -42,6 +42,8 @@ class TradingMode(Enum):
     """
     SPOT = 1
     MARGIN = 2
+    FUTURES = 3
+    OPTIONS = 4
 
 
 class QuoteCurrency(Enum):
@@ -76,9 +78,14 @@ class Timeframe(Enum):
     YEARLY = "1 Y"
 
 
-TRADING_MODES = [RunMode.LIVE, RunMode.DRY_RUN]
-OPTIMIZATION_MODES = [RunMode.BACKTEST]
-NON_UTIL_MODES = TRADING_MODES + OPTIMIZATION_MODES
+TRADING_MODES = [
+    RunMode.LIVE,
+    RunMode.PAPER,
+]
+SIMULATION_MODES = [
+    RunMode.BACKTEST,
+    RunMode.FORDWARDTEST,
+]
 
 LOW_TIMEFRAMES = [
     Timeframe.MINUTE,

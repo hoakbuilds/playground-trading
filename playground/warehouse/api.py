@@ -14,7 +14,7 @@ from playground.warehouse.persistence import Warehouse
 
 WAREHOUSE_BASE_URI = '/api/v1/warehouse'
 WAREHOUSE_REST_IP = '0.0.0.0'
-WAREHOUSE_REST_PORT = 5566
+WAREHOUSE_REST_PORT = 1300
 
 
 class WarehouseAPI(APIServer):
@@ -103,9 +103,15 @@ class WarehouseAPI(APIServer):
         """
         tf: str = timeframe.replace('_', ' ')
 
-        dataset = self.warehouse.get_dataset(pair=pair, timeframe=tf, analysed=True)
+        if self.warehouse.is_updated():
 
-        return self.rest_dump({'data': dataset.to_csv() })
+            dataset = self.warehouse.get_dataset(pair=pair, timeframe=tf, analysed=True)
+
+            return self.rest_dump({'data': dataset.to_csv() })
+
+        return self.rest_dump({'data': {
+            'message': 'Warehouse is not updated.'
+        }})
 
     def _get_dataset_limit(self, pair=None, timeframe=None, limit=None):
         """
@@ -115,9 +121,15 @@ class WarehouseAPI(APIServer):
 
         dataset: pd.DataFrame = None
 
-        if int(limit) == 1:
-            dataset = self.warehouse.get_latest_candle(pair=pair, timeframe=tf, analysed=True, closed=True)
-        else:
-            dataset = self.warehouse.get_dataset(pair=pair, timeframe=tf, analysed=True, limit=int(limit))
+        if self.warehouse.is_updated():
 
-        return self.rest_dump({'data': dataset.to_csv() })
+            if int(limit) == 1:
+                dataset = self.warehouse.get_latest_candle(pair=pair, timeframe=tf, analysed=True, closed=True)
+            else:
+                dataset = self.warehouse.get_dataset(pair=pair, timeframe=tf, analysed=True, limit=int(limit))
+
+            return self.rest_dump({'data': dataset.to_csv() })
+        
+        return self.rest_dump({'data': {
+            'message': 'Warehouse is not updated.'
+        }})
