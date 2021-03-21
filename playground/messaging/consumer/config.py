@@ -50,6 +50,7 @@ class ConsumerConfig:
             raise Exception("ConsumerConfig class needs `consume_stream` param to connect to stream")
         self.consume_stream = consume_stream
 
+
 def consumer_config_from_json(self, json: Dict[str, Any] = None) -> None:
     """
     Simply initiate the ConsumerConfig.

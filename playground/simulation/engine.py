@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime as dt
 from dateutil.parser import parse
-from typing import Callable
+from typing import Callable, List
 
 # Local imorts
 from playground import settings
@@ -21,32 +21,15 @@ from playground.simulation.operations import SimulatedOperation
 class SimulationEngine():
     """An object representing the Simulation Engine.."""
     
-
     operations: List[SimulatedOperation]
+    backtesting_engine: BacktestEngine = None
+    forwardtesting_engine: ForwardtestEngine = None
 
     def __init__(self, config, yesterday, initial_capital, pair, tf, logic,):
         """Initate the SimulationEngine.
         param: config: An HLOCV+ pandas dataframe with a datetime index
         type: config: pandas.DataFrame
-        """  
-        if not isinstance(data, pd.DataFrame):
-            raise ValueError("Data must be a pandas dataframe")
-
-        self.logger = setup_logger(name=self._name)
-        # rd stands for relativedelta
-        rd_call: Callable = None
-        rd_args: dict = None
-        rd_call, rd_args = get_delta_callable_for_tf(tf=self.tf)
-        self.__verbosity = settings.FORWARDTESTING_VERBOSITY
-        self.__analysis_throttle = rd_call(**rd_args)
-        self.__next_candle = (dt.fromtimestamp(self.yesterday.time) + self.__analysis_throttle)
-        self.__next_analysis = (self.__next_candle + self.__analysis_throttle)
-        self.__start_time = dt.now()
-        self.logger.info('Forwardtesting session started for: {}-{} using {} at {} '.format(
-            self.pair, self.tf, self.logic.__name__, self.__start_time,
-            ),
-        )
-        self.logger.info('next analysis {}'.format(self.__next_analysis))
+        """
 
     def update_datasets(self, dataset):
         """Process ForwardTestSession.

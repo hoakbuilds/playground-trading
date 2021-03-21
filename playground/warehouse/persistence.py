@@ -36,7 +36,6 @@ class Warehouse:
     ready: bool = False
     updated: bool = False
     analysed: bool = False
-    producer_queue: Queue = None
 
     # Assets on which to operate and check for missing and outdated datasets on startup
     market_pairs: List = None
@@ -98,13 +97,6 @@ class Warehouse:
             # Only analyse the ones we detected earlier for less startup time
         
         self.set_ready()
-
-        self.producer_queue = Queue()
-    
-    def get_producer_queue(self) -> None:
-        """
-        """
-        return self.producer_queue
 
     def get_latest_candle(
         self, pair: MarketPair = None, timeframe: str = '', analysed: bool = False, closed: bool = False,
@@ -237,19 +229,12 @@ class Warehouse:
         self.set_analysing()
 
         if not datasets:
-            payload: Dict[str, Any] = []
             for pair in self.market_pairs:
                 for tf in s.WAREHOUSE_TIMEFRAMES:
                     item = {
                         'pair': pair,
                         'timeframe': tf
                     }
-                    if self.producer_queue is not None:
-                        self.logger.info('Producing message to re-analyse dataset for {} {}..'.format(
-                            item.get('pair'), item.get('timeframe').replace(' ', '')
-                            )
-                        )
-                        payload = payload.append(item)
                     helper = threading.Thread(target=Analysis, args=[item])
                     helper.start()
                     helpers.append(helper)
@@ -258,33 +243,13 @@ class Warehouse:
                             item.get('pair'), item.get('timeframe').replace(' ', '')
                             )
                         )
-            if self.producer_queue is not None:
-                message = Message(
-                    stream=Stream(
-                        module_name='analysis',
-                        name='analysis-socket',
-                        socket_ip='0.0.0.0',
-                        socket_port=2100,
-                    ),
-                    payload=Payload(
-                        raw={'items': payload}
-                    )
-                )
-                self.producer_queue.put(message)
         else:
-            payload: Dict[str, Any] = []
             for pair in datasets:
                 for tf in s.WAREHOUSE_TIMEFRAMES:
                     item = {
                         'pair': pair,
                         'timeframe': tf
                     }
-                    if self.producer_queue is not None:
-                        self.logger.info('Producing message to analyse dataset for {} {}..'.format(
-                            item.get('pair'), item.get('timeframe').replace(' ', '')
-                            )
-                        )
-                        payload = payload.append(item)
                     helper = threading.Thread(target=Analysis, args=[item])
                     helper.start()
                     helpers.append(helper)
@@ -293,19 +258,6 @@ class Warehouse:
                             item.get('pair'), item.get('timeframe').replace(' ', '')
                             )
                         )
-            if self.producer_queue is not None:
-                message = Message(
-                    stream=Stream(
-                        module_name='analysis',
-                        name='analysis-socket',
-                        socket_ip='0.0.0.0',
-                        socket_port=2100,
-                    ),
-                    payload=Payload(
-                        raw={'items': payload}
-                    )
-                )
-                self.producer_queue.put(message)
         for helper in helpers:
             helper.join()
 
@@ -329,7 +281,6 @@ class Warehouse:
             self.logger.info('Datasets outdated: {}'.format(self.outdated_sets))
             self.set_updating()
             self.update_datasets()
-            #self.set_analysing()
             self.logger.info('Warehouse successfully updated.')
 
     def _update_dataset(self, config: Dict[str, Any]) -> None:
@@ -356,25 +307,116 @@ class Warehouse:
         api_args: dict = None
 
         candle = self.get_latest_candle(pair=config.get('pair'), timeframe=config.get('timeframe'))
-
         (api_call, api_args) = get_cc_callable_by_time(cc=_cc, config=config, candle=candle)
-        # Fetch new data
-        data = api_call(**api_args)
-        new_data: list = data.get('Data', None)
 
-        if new_data:
-            new_dataset: pd.DataFrame = pd.DataFrame(new_data)
-            new_dataset['datetime'] = [dt.fromtimestamp(d) for d in new_dataset.time]
-            new_dataset['timestamp'] = [d for d in new_dataset.time]
-            new_dataset = new_dataset.set_index('time')
+        limit_arg: int = api_args.get('limit', 0)
+        limit_left: int = -1
 
+        if limit_arg > 2000:
+            api_args['limit'] = 2000
+            limit_left = limit_arg - 2000
+        
+        if self._extra_verbose:
+            self.logger.info('Updating dataset %s %s. Candles: {} candles-left: {} '.format(limit_arg, limit_left), config.get('pair'), config.get('timeframe').replace(' ', ''))
+
+        new_data: list = None
+        initial_data: dict = None
+        data: dict = None
+        new_dataset: pd.DataFrame = None
+
+        # Fetch our disk dataset so we can update it as we go
+        self.___read_lock.acquire(blocking=True)
+        dataset_file = s.DATASET_FOLDER + '{}_{}.csv'.format(
+            config.get('pair'), config.get('timeframe')).replace(' ', '')
+        disk_dataset = self._get_dataset_from_file(filename=dataset_file,)
+        disk_dataset = disk_dataset.set_index('time')
+        self.___read_lock.release()
+
+        try:
+            data = api_call(**api_args)
+        except Exception as exc:
+            self.logger.exception('Warehouse found exception: Connection with API is unstable. :: %s', config, exc_info=exc)
+            time.sleep(self.__throttle)
+
+        """
+        Fetch new data in a loop, if the key 'limit' in the `api_args` dict is lesser than 2000 it will break the loop
+        """
+        while True:
+            if limit_left == 0:
+                break
+            # Limit is lesser than 2000, break the loop and update dataset
+            if limit_arg < 2000:
+                new_data: list = data.get('Data', None)
+                if new_data:
+                    new_dataset: pd.DataFrame = pd.DataFrame(new_data)
+                    new_dataset['datetime'] = [dt.fromtimestamp(d) for d in new_dataset.time]
+                    new_dataset['timestamp'] = [d for d in new_dataset.time]
+                    new_dataset = new_dataset.set_index('time')
+                break
+
+            if data is not None:
+                initial_data: list = data.get('Data', None)
+                new_dataset: pd.DataFrame = pd.DataFrame(initial_data).set_index('time')
+                if self._extra_verbose:
+                    self.logger.info('Dataset Length: ' + str(len(new_dataset)))
+
+                while limit_left > 0:
+                    if limit_left > 2000:
+                        api_args =  {
+                            'symbol': str(config.get('pair').base_currency),
+                            'aggregate': int(config.get('timeframe').split(' ')[0]),
+                            'limit': 2000,
+                            'timestamp': data.get('TimeFrom', None),
+                        }
+                        limit_left -= 2000
+                    else:
+                        api_args =  {
+                            'symbol': str(config.get('pair').base_currency),
+                            'aggregate': int(config.get('timeframe').split(' ')[0]),
+                            'limit': limit_left,
+                            'timestamp': data.get('TimeFrom', None),
+                        }
+                        limit_left = 0
+
+                    if self._extra_verbose:
+                        self.logger.info('Updating dataset %s %s. Candles: {} candles-left: {} '.format(limit_arg, limit_left), config.get('pair'), config.get('timeframe').replace(' ', ''))
+
+                    try:
+                        data = api_call(**api_args)
+                    except Exception as exc:
+                        self.logger.exception('Warehouse found exception: Connection with API is unstable. :: %s', config, exc_info=exc)
+                        time.sleep(self.__throttle)
+                        continue
+
+                    if data:
+                        self.logger.info('Fetched dataset for %s - %s from ' + \
+                            str(timestamp_to_date(data.get('TimeFrom', None)).date()) + ' to ' + \
+                            str(timestamp_to_date(data.get('TimeTo', None)).date()), config['pair'], config['timeframe']
+                        )
+                        new_data: list = data.get('Data', None)
+                        if new_data is not None and len(new_data) != 0:
+                            if new_data[0]['high'] == 0 and new_data[0]['open'] == 0 and \
+                                new_data[0]['low'] == 0 and  new_data[0]['close'] == 0 and new_data[0]['volumeto'] == 0:
+                                break
+                            df: pd.DataFrame = pd.DataFrame(new_data).set_index('time')
+                            new_dataset = new_dataset.append(df, sort=False)
+                            if self._extra_verbose:
+                                self.logger.info('Dataset Length: ' + str(len(new_dataset)))
+                        else:
+                            break
+                        time.sleep(self.__throttle)
+                    else:
+                        break
+
+                new_dataset.sort_index(inplace=True, ascending=False)
+                new_dataset['datetime'] = [dt.fromtimestamp(d) for d in new_dataset.index]
+                new_dataset['timestamp'] = [d for d in new_dataset.index]
+
+                if self._extra_verbose:
+                    self.logger.info('DataFrame: ' + str(new_dataset.shape))
+
+        if new_dataset is not None:
             self.___update_lock.acquire(blocking=True)
-            # Fetch our disk dataset
-            dataset_file = s.DATASET_FOLDER + '{}_{}.csv'.format(
-                config.get('pair'), config.get('timeframe')).replace(' ', '')
-            disk_dataset = self._get_dataset_from_file(filename=dataset_file,)
-            disk_dataset = disk_dataset.set_index('time')
-
             # Join the data together and overwrite existing timeperiods with newest data
             newest_dataset: pd.DataFrame = disk_dataset.copy(deep=True)
             newest_dataset = newest_dataset.append(new_dataset, sort=False)
@@ -388,26 +430,6 @@ class Warehouse:
             self.___update_lock.release()
         else:
             self._build_dataset(config=config)
-
-        if self.producer_queue is not None:                    
-            self.logger.info('Producing message to analyse dataset for {} {}..'.format(
-                config.get('pair'), config.get('timeframe').replace(' ', '')
-                )
-            )
-            payload = []
-            payload = payload.append(config)
-            message = Message(
-                stream=Stream(
-                    module_name='analysis',
-                    name='analysis-socket',
-                    socket_ip='0.0.0.0',
-                    socket_port=2100,
-                ),
-                payload=Payload(
-                    raw={'items': payload}
-                )
-            )
-            self.producer_queue.put(message)
 
         return Analysis(item=config)
 
@@ -424,7 +446,7 @@ class Warehouse:
         """
 
         if self._extra_verbose:
-            self.logger.info('Building dataset for %s with interval %s.', config['pair'], config['timeframe'])
+            self.logger.info('Building dataset for %s %s.', config['pair'], config['timeframe'])
 
         cc_config = {
             'comparison_symbol': str(config.get('pair').quote_currency),
@@ -500,26 +522,6 @@ class Warehouse:
                 dataset.to_csv(dataset_file)
                 self.___update_lock.release()
                 break
-    
-        if self.producer_queue is not None:
-            self.logger.info('Producing message to analyse dataset for {} {}..'.format(
-                config.get('pair'), config.get('timeframe').replace(' ', '')
-                )
-            )
-            payload = []
-            payload = payload.append(config)
-            message = Message(
-                stream=Stream(
-                    module_name='analysis',
-                    name='analysis-socket',
-                    socket_ip='0.0.0.0',
-                    socket_port=2100,
-                ),
-                payload=Payload(
-                    raw={'items': payload}
-                )
-            )
-            self.producer_queue.put(message)
 
         return Analysis(item=config)
 
@@ -661,7 +663,7 @@ class Warehouse:
             try:
                 dataset = pd.read_csv(filename)
             except FileNotFoundError as exc:
-                self.logger.exception("Warehouse found excecption trying to read file. Filename: " + filename, exc_info=exc)
+                self.logger.error("Warehouse found excecption trying to read file. Filename: " + filename)
                 self.___read_lock.release()
                 return False
             
@@ -703,7 +705,7 @@ class Warehouse:
                 else:
                     dataset = pd.read_csv(filename, error_bad_lines=False)
             except FileNotFoundError as exc:
-                self.logger.exception("Warehouse found exception trying to read file. Filename: " + filename, exc_info=exc)
+                self.logger.error("Warehouse found exception trying to read file. Filename: " + filename)
                 self.___read_lock.release()
                 return None
 

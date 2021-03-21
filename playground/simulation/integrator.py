@@ -6,6 +6,7 @@ __license__ = "MIT"
 __email__ = "murlux@protonmail.com"
 
 from logging import Logger
+from typing import Dict
 from playground.util import setup_logger
 
 
@@ -20,7 +21,7 @@ class SimulationIntegrator:
     # Critical objects
 
 
-    def __init__(self) -> None:
+    def __init__(self, config: Dict = None) -> None:
         """Initialize the playground's simulation integrator."""
 
         self.logger = setup_logger(name='{}.{}'.format(__title__, __name__))

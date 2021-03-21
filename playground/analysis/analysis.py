@@ -39,6 +39,7 @@ class Analysis:
         self.read_queue = Queue()
 
         if item is not None:
+            self.logger.info('Starting analysis of {} - {}'.format(item.get('pair'), item.get('timeframe')))
             self.run(item=item)
 
     def run(self, item: dict = None) -> None:

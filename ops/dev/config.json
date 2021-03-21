@@ -2,48 +2,10 @@
     "name": "Default Playground Config",
     "mode": "dev",
     "modules": [
-        "bridge",
         "warehouse",
         "analysis",
         "simulation"
     ],
-    "bridge": {
-        "name": "BridgeIntegrator",
-        "module_name": "bridge",
-        "flows": [
-            {
-                "name": "warehouse-analysis",
-                "source": {
-                    "module_name": "warehouse",
-                    "name": "warehouse-producer",
-                    "key": "k3y-h3r3-w4r3h0us3-4n4ly515"
-                },
-                "target": {
-                    "module_name": "analysis",
-                    "name": "analysis-consumer",
-                    "key": "k3y-h3r3-w4r3h0us3-4n4ly515"
-                }
-            },
-            {
-                "name": "analysis-simulation",
-                "source": {
-                    "module_name": "analysis",
-                    "name": "analysis-producer",
-                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
-                },
-                "target": {
-                    "module_name": "analysis",
-                    "name": "simulation-consumer",
-                    "key": "k3y-h3r3-4n4ly5i5-51mul4t10n"
-                }
-            }
-        ],
-        "api": {
-            "name": "WarehouseAPI",
-            "rest_ip": "0.0.0.0",
-            "rest_port": 5677 
-        }
-    },
     "warehouse": {
         "name": "WarehouseIntegrator",
         "module_name": "warehouse",

@@ -7,10 +7,10 @@
                                                                                            
 ```
 
-# playground
-[![Build Status](https://api.cirrus-ci.com/github/murlokito/playground.svg)](https://cirrus-ci.com/github/murlokito/playground)
+# playground [DISCONTINUED]
 
-A playground for cryptocurrency technical analysis.
+A playground for cryptocurrency analysis and signal automation.
+
 
 ## Getting Started
 

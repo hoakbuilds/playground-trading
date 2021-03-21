@@ -42,17 +42,15 @@ class PlaygroundIntegrator(Integrator):
                 module_name="playground",
             )
 
-        self.warehouse = WarehouseIntegrator(config=config.warehouse)
+        self.warehouse = WarehouseIntegrator(config=None)
 
-        self.analysis = AnalysisIntegrator()
-
-        self.simulation = SimulationIntegrator()
+        self.simulation = SimulationIntegrator(config=None)
 
     def run(self) -> None:
 
         self.warehouse.run()
 
-        self.analysis.run()
-
+        self.simulation.run()
+        
         while not self.warehouse.worker.state == State.EXIT:
             pass

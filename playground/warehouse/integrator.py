@@ -13,9 +13,6 @@ from playground.warehouse.config import WarehouseConfig
 from playground.warehouse.persistence import Warehouse
 from playground.warehouse.worker import WarehouseWorker
 from playground.warehouse.api import WarehouseAPI
-from playground.warehouse.socket import WarehouseSocket
-from playground.messaging.stream import Stream
-from playground.warehouse.producer import WarehouseSocketProducer
 
 
 class WarehouseIntegrator(Integrator):
@@ -30,8 +27,6 @@ class WarehouseIntegrator(Integrator):
     warehouse: Warehouse = None
     worker: WarehouseWorker = None
     api: WarehouseAPI = None
-    socket: WarehouseSocket = None
-    producer: WarehouseSocketProducer = None
 
 
     def __init__(self, config: WarehouseConfig) -> None:
@@ -50,10 +45,7 @@ class WarehouseIntegrator(Integrator):
         self.warehouse = Warehouse()
         self.worker = WarehouseWorker(warehouse=self.warehouse)
         self.api = WarehouseAPI(warehouse=self.warehouse)
-        self.socket = WarehouseSocket(warehouse=self.warehouse)
-        self.producer = WarehouseSocketProducer(
-            config=config.producer_config
-        )
+
 
     def run(self) -> None:
         """
@@ -66,10 +58,4 @@ class WarehouseIntegrator(Integrator):
         self.worker.Start()
 
         # Start the thread that will launch the socket
-        self.socket.Start()
-
-        # Start the thread that will launch the socket
-        self.producer.connect_and_run()
-        
-        #self.logger.info('Setting the warehouse\'s producer queue')
-        self.producer.set_read_queue(queue=self.warehouse.get_producer_queue())
+        #self.socket.Start()

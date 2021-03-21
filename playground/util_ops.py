@@ -90,15 +90,18 @@ def get_limit_for_candle_delta(candle: pd.DataFrame = None, config: Dict[str, An
     time_period = int(split[0])
 
     if split[1] == 'm':
+        if time_since.days != 0:
+            limit += int((time_since.days * 1440) / time_period)
 
         if time_since.hours != 0:
-            limit = int((time_since.hours * 60) / time_period)
+            limit += int((time_since.hours * 60) / time_period)
+
         limit += int(time_since.minutes / time_period)
 
     elif split[1] == 'h':
-
         if time_since.days != 0:
-            limit = int((time_since.days * 24) / time_period)
+            limit += int((time_since.days * 24) / time_period)
+
         limit += int(time_since.hours / time_period)
 
     elif split[1] == 'D':
