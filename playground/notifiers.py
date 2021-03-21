@@ -1,11 +1,6 @@
 import tweepy
 
-from playground.settings import (
-    CONSUMER_KEY, 
-    CONSUMER_SECRET,
-    ACCESS_TOKEN,
-    ACCESS_TOKEN_SECRET,
-)
+from playground import settings as s
 
 
 class TwitterNotifier:
@@ -14,8 +9,8 @@ class TwitterNotifier:
     """
 
     def __init__(self, logger):
-        self.auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
-        self.auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+        self.auth = tweepy.OAuthHandler(s.CONSUMER_KEY, s.CONSUMER_SECRET)
+        self.auth.set_access_token(s.ACCESS_TOKEN, s.ACCESS_TOKEN_SECRET)
         self.api = tweepy.API(self.auth)
         self.logger = logger
 

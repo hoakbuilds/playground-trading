@@ -1,0 +1,59 @@
+{
+    "name": "Default Playground Config",
+    "mode": "prod",
+    "modules": [
+        "warehouse",
+        "analysis",
+        "simulation"
+    ],
+    "configs": {
+        "warehouseConfig": {
+            "warehouse": {
+
+            },
+            "api": {
+
+            },
+            "socket": {
+
+            },
+            "worker": {
+
+            },
+            "producer": {
+
+            }
+        },
+        "analysisConfig": {
+            "analysis": {
+
+            },
+            "api": {
+
+            },
+            "socket": {
+
+            },
+            "worker": {
+
+            },
+            "producer": {
+
+            }
+        },
+        "simulationConfig": {
+            "simulation": {
+
+            },
+            "api": {
+
+            },
+            "socket": {
+
+            },
+            "worker": {
+
+            }
+        }
+    }
+}

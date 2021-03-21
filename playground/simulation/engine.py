@@ -5,254 +5,33 @@ __credits__ = (__author__, )
 __license__ = "MIT"
 __email__ = "murlux@protonmail.com"
 
-import bokeh.plotting
 import pandas as pd
 import numpy as np
-import warnings
-import time
-import logging
 from datetime import datetime as dt
 from dateutil.parser import parse
-from dateutil.relativedelta import relativedelta as rd
-from typing import Callable
+from typing import Callable, List
 
 # Local imorts
 from playground import settings
-from playground.notifiers import TwitterNotifier
-from playground.simulation import Account, helpers
 from playground.util import setup_logger
 from playground.util_ops import get_delta_callable_for_tf
+from playground.simulation.operations import SimulatedOperation
 
 
-class BackTestSession():
-    """An object representing a Back Testing Simulation."""
+class SimulationEngine():
+    """An object representing the Simulation Engine.."""
+    
+    operations: List[SimulatedOperation]
+    backtesting_engine: BacktestEngine = None
+    forwardtesting_engine: ForwardtestEngine = None
 
-    _name: str
-    __verbosity: bool = False
-
-    def __init__(self, data):
-        """Initate the BackTestSession.
-        :param data: An HLOCV+ pandas dataframe with a datetime index
-        :type data: pandas.DataFrame
-        :return: A bactesting simulation
-        :rtype: BackTestSession
-        """  
-        if not isinstance(data, pd.DataFrame):
-            raise ValueError("Data must be a pandas dataframe")
-
-        missing = set(['high', 'low', 'open', 'close', 'volume'])-set(data.columns)
-        if len(missing) > 0:
-            msg = "Missing {0} column(s), dataframe must be HLOCV+".format(list(missing))
-            warnings.warn(msg)
-
-        self.data = data
-        self.__verbosity = settings.FORWARDTESTING_VERBOSITY
-
-    def start(self, initial_capital, logic):
-        """Start BackTestSession.
-        :param initial_capital: Starting capital to fund account
-        :type initial_capital: float
-        :param logic: A function that will be applied to each lookback period of the data
-        :type logic: function
-        :return: A bactesting simulation
-        :rtype: BackTestSession
+    def __init__(self, config, yesterday, initial_capital, pair, tf, logic,):
+        """Initate the SimulationEngine.
+        param: config: An HLOCV+ pandas dataframe with a datetime index
+        type: config: pandas.DataFrame
         """
-        self.tracker = []
-        self.account = Account(initial_capital)
 
-        self._name = '{}-{}'.format(logic.__name__, str(dt.now().isoformat()))
-
-        # Enter BackTestSession ---------------------------------------------  
-        for index, today in self.data.iterrows():
-    
-            date = today['datetime']
-            equity = self.account.total_value(today['close'])
-
-            # Handle stop loss
-            for p in self.account.positions:
-                if p.type == "long":
-                    if p.stop_hit(today['low']):
-                        self.account.close_position(p, 1.0, today['low'])
-                if p.type == "short":
-                    if p.stop_hit(today['high']):
-                        self.account.close_position(p, 1.0, today['high'])
-
-            self.account.purge_positions()
-
-            # Update account variables
-            self.account.date = date
-            self.account.equity.append(equity)
-
-            # Equity tracking
-            self.tracker.append({'date': date, 
-                                 'benchmark_equity' : today['close'],
-                                 'strategy_equity' : equity})
-
-            # Execute trading logic
-            lookback = self.data[0:index+1]
-            logic(self.account, lookback)
-
-            # Cleanup empty positions
-            self.account.purge_positions()     
-        # ------------------------------------------------------------
-
-        # For pyfolio
-        df = pd.DataFrame(self.tracker)
-        df['benchmark_return'] = (df.benchmark_equity-df.benchmark_equity.shift(1))/df.benchmark_equity.shift(1)
-        df['strategy_return'] = (df.strategy_equity-df.strategy_equity.shift(1))/df.strategy_equity.shift(1)
-        df.index = df['date']
-        del df['date']
-        return df
-
-    def results(self):   
-        """Print results"""           
-        self.logger.info("-------------- Results ----------------\n")
-        being_price = self.data.iloc[0]['open']
-        final_price = self.data.iloc[-1]['close']
-
-        pc = helpers.percent_change(being_price, final_price)
-        self.logger.info("Buy and Hold : {0}%".format(round(pc*100, 2)))
-        self.logger.info("Net Profit   : {0}".format(round(helpers.profit(self.account.initial_capital, pc), 2)))
-        
-        pc = helpers.percent_change(self.account.initial_capital, self.account.total_value(final_price))
-        self.logger.info("Strategy     : {0}%".format(round(pc*100, 2)))
-        self.logger.info("Net Profit   : {0}".format(round(helpers.profit(self.account.initial_capital, pc), 2)))
-
-        longs  = len([t for t in self.account.opened_trades if t.type == 'long'])
-        sells  = len([t for t in self.account.closed_trades if t.type == 'long'])
-        shorts = len([t for t in self.account.opened_trades if t.type == 'short'])
-        covers = len([t for t in self.account.closed_trades if t.type == 'short'])
-
-        self.logger.info("Longs        : {0}".format(longs))
-        self.logger.info("Sells        : {0}".format(sells))
-        self.logger.info("Shorts       : {0}".format(shorts))
-        self.logger.info("Covers       : {0}".format(covers))
-        self.logger.info("--------------------")
-        self.logger.info("Total Trades : {0}".format(longs + sells + shorts + covers))
-        self.logger.info("\n---------------------------------------")
-    
-    def chart(self, show_trades=False, title="Equity Curve"):
-        """Chart results.
-        :param show_trades: Show trades on plot
-        :type show_trades: bool
-        :param title: Plot title
-        :type title: str
-        """     
-        bokeh.plotting.output_file("{}{}".format(settings.BACKTESTS_CHARTS_FOLDER, self._name), title=title)
-        p = bokeh.plotting.figure(x_axis_type="datetime", plot_width=1000, plot_height=400, title=title)
-        p.grid.grid_line_alpha = 0.3
-        p.xaxis.axis_label = 'Date'
-        p.yaxis.axis_label = 'Equity'
-        shares = self.account.initial_capital/self.data.iloc[0]['open']
-        base_equity = [price*shares for price in self.data['open']]      
-        p.line(self.data['date'], base_equity, color='#CAD8DE', legend='Buy and Hold')
-        p.line(self.data['date'], self.account.equity, color='#49516F', legend='Strategy')
-        p.legend.location = "top_left"
-
-        if show_trades:
-            for trade in self.account.opened_trades:
-                try:
-                    x = time.mktime(trade.date.timetuple())*1000
-                    y = self.account.equity[np.where(self.data['date'] == trade.date.strftime("%Y-%m-%d"))[0][0]]
-                    if trade.type == 'long': p.circle(x, y, size=6, color='green', alpha=0.5)
-                    elif trade.type == 'short': p.circle(x, y, size=6, color='red', alpha=0.5)
-                except:
-                    pass
-
-            for trade in self.account.closed_trades:
-                try:
-                    x = time.mktime(trade.date.timetuple())*1000
-                    y = self.account.equity[np.where(self.data['date'] == trade.date.strftime("%Y-%m-%d"))[0][0]]
-                    if trade.type == 'long': p.circle(x, y, size=6, color='blue', alpha=0.5)
-                    elif trade.type == 'short': p.circle(x, y, size=6, color='orange', alpha=0.5)
-                except:
-                    pass
-        
-        bokeh.plotting.show(p)
-
-
-class ForwardTestSession():
-    """An object representing a Forward Testing Simulation."""
-
-    backdata: pd.DataFrame = None
-    yesterday: pd.DataFrame = None
-    today: pd.DataFrame = None
-    data: pd.DataFrame = pd.DataFrame()
-    initial_capital: float = 1.0
-    pair: dict = None
-    tf: dict = None
-    tracker: list = None
-    logic: Callable = None
-    logger: logging.Logger
-    _name: str = ''
-    _tts: str = ''
-    _simple_tts: str = ''
-    __start_time: dt = None
-    __next_candle: dt = None
-    __next_analysis: dt = None
-    __analysis_throttle: rd = None
-    __verbosity: bool = False
-
-    def __init__(self, data, yesterday, initial_capital, pair, tf, logic,):
-        """Initate the ForwardTestSession.
-        :param data: An HLOCV+ pandas dataframe with a datetime index
-        :type data: pandas.DataFrame
-        :param yesterday: An HLOCV+ pandas dataframe with a datetime index
-        :type yesterday: pandas.DataFrame
-        :param initial_capital: Starting capital to fund account
-        :type initial_capital: float
-        :param pair: Operating market pair
-        :type pair: MarketPair obj
-        :param tf: Operating timeframe
-        :type tf: str
-        :param logic: A function that will be applied to each lookback period of the data
-        :type logic: function
-        :return: A forwardtesting simulation
-        :rtype: ForwardTestSession
-        """  
-        if not isinstance(data, pd.DataFrame):
-            raise ValueError("Data must be a pandas dataframe")
-
-        missing = set(['high', 'low', 'open', 'close', 'volume'])-set(data.columns)
-        if len(missing) > 0:
-            msg = "Missing {0} column(s), dataframe must be HLOCV+".format(list(missing))
-            warnings.warn(msg)
-
-        self.tracker = []
-        self.backdata = data.copy()
-        self.yesterday = yesterday
-        self.today = None
-        self.backdata = self.backdata.set_index('datetime').sort_index(inplace=True, ascending=False)
-        self.account = Account(initial_capital=initial_capital, pair=pair, tf=tf)
-        self.logic = logic
-        self.pair = pair
-        self.tf = tf
-        self._simple_tts = '{} - {}\n\n'.format(
-            self.pair, self.tf, logic.__name__,
-        )
-        self._tts = __name__+'\n\n{} - {}\n :: {}\n\n'.format(
-            self.pair, self.tf, logic.__name__,
-        )
-        self._name = __name__+'. {} - {} :: {} :: {}'.format(
-            self.pair, self.tf, logic.__name__, str(dt.now().date()),
-        ).replace(' ', '')
-        self.logger = setup_logger(name=self._name)
-        # rd stands for relativedelta
-        rd_call: Callable = None
-        rd_args: dict = None
-        rd_call, rd_args = get_delta_callable_for_tf(tf=self.tf)
-        self.__verbosity = settings.FORWARDTESTING_VERBOSITY
-        self.__analysis_throttle = rd_call(**rd_args)
-        self.__next_candle = (dt.fromtimestamp(self.yesterday.time) + self.__analysis_throttle)
-        self.__next_analysis = (self.__next_candle + self.__analysis_throttle)
-        self.__start_time = dt.now()
-        self.logger.info('Forwardtesting session started for: {}-{} using {} at {} '.format(
-            self.pair, self.tf, self.logic.__name__, self.__start_time,
-            ),
-        )
-        self.logger.info('next analysis {}'.format(self.__next_analysis))
-
-    def update_dataset(self, dataset):
+    def update_datasets(self, dataset):
         """Process ForwardTestSession.
         :param dataset: An HLOCV+ pandas dataframe with a datetime index
         :type dataset: pandas.DataFrame
@@ -424,50 +203,8 @@ class ForwardTestSession():
                 'positions': self.account._get_positions(),
             }
 
-    def _get_longs(self):
-        return self.account._get_longs()
-
-    def _get_shorts(self):
-        return self.account._get_shorts()
-
-    def chart(self, show_trades=False, title="Equity Curve"):
-        """Chart results.
-        :param show_trades: Show trades on plot
-        :type show_trades: bool
-        :param title: Plot title
-        :type title: str
-        """     
-        bokeh.plotting.output_file("{}chart-{0}.html".format(settings.FORWARDTESTS_CHARTS_FOLDER, self._name), title=title)
-        p = bokeh.plotting.figure(x_axis_type="datetime", plot_width=1000, plot_height=400, title=title)
-        p.grid.grid_line_alpha = 0.3
-
-        p.xaxis.axis_label = 'Date'
-        p.yaxis.axis_label = 'Equity'
-
-        shares = self.account.initial_capital/self.data.iloc[-1].open
-        base_equity = [price*shares for price in self.data.open]
-
-        p.line(self.data.datetime, base_equity, color='#CAD8DE', legend_label='Buy and Hold')
-        p.line(self.data.datetime, self.account.equity, color='#49516F', legend_label='Strategy')
-        p.legend.location = "top_left"
-
-        if show_trades:
-            for trade in self.account.opened_trades:
-                try:
-                    x = time.mktime(trade.date.timetuple())*1000
-                    y = self.account.equity[np.where(self.data.datetime == trade.date)[0][0]]
-                    if trade.type == 'long': p.circle(x, y, size=6, color='green', alpha=0.5)
-                    elif trade.type == 'short': p.circle(x, y, size=6, color='red', alpha=0.5)
-                except:
-                    pass
-
-            for trade in self.account.closed_trades:
-                try:
-                    x = time.mktime(trade.date.timetuple())*1000
-                    y = self.account.equity[np.where(self.data.datetime == trade.date)[0][0]]
-                    if trade.type == 'long': p.circle(x, y, size=6, color='blue', alpha=0.5)
-                    elif trade.type == 'short': p.circle(x, y, size=6, color='orange', alpha=0.5)
-                except:
-                    pass
-        
-        bokeh.plotting.show(p)
+    def _get_operations(self):
+        """
+        TODO: Get operations from the current simulation engine execution
+        """
+        return self
