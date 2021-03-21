@@ -37,18 +37,18 @@ def MRFI(df, timeperiod: int = 14):
         
         if mrfi_basis > float(100):
             mrfi_basis = float(100)
-        if mrfi_basis < float(0.00001):
+        if mrfi_basis < float(0.01):
             mrfi_basis = float(0)
         if mrfi_inverse > float(100):
             mrfi_inverse = float(100)
-        if mrfi_inverse < float(0.00001):
+        if mrfi_inverse < float(0.01):
             mrfi_inverse = float(0)
 
         mrfi = float((mrfi_basis + mrfi_inverse) / 2)
 
         if mrfi > float(100):
             mrfi = float(100)
-        if mrfi < float(0.00001):
+        if mrfi < float(0.01):
             mrfi = float(0)
 
         data['time'].append(row['timestamp'])

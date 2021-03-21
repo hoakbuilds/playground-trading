@@ -1,0 +1,23 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "WarehouseModuleConfig",
+    "type": "object",
+    "properties": {
+      "warehouse": {
+        "type": "object"
+      },
+      "api": {
+        "type": "object"
+      },
+      "socket": {
+        "type": "object"
+      },
+      "worker": {
+        "type": "object"
+      },
+      "producer": {
+        "type": "object"
+      }
+    },
+    "required": ["warehouse", "api", "socket", "worker", "producer" ]
+}

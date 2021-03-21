@@ -27,7 +27,7 @@ setup(
     description="more than a trading bot",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/murlokito/wedgiebot",
+    url="https://github.com/murlokito/playground",
     packages=find_packages(),
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],

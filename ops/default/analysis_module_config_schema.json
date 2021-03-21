@@ -1,0 +1,23 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "AnalysisModuleConfig",
+    "type": "object",
+    "properties": {
+      "analysis": {
+        "type": "object"
+      },
+      "api": {
+        "type": "object"
+      },
+      "socket": {
+        "type": "object"
+      },
+      "worker": {
+        "type": "object"
+      },
+      "producer": {
+        "type": "object"
+      }
+    },
+    "required": ["analysis", "api", "socket", "worker", "producer" ]
+}

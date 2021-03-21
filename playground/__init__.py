@@ -8,7 +8,14 @@ __license__ = "GPL"
 __email__ = "murlux@protonmail.com"
 __status__ = "Prototype"
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 
 from . import *
+
+
+__all__ = [
+    __name__, __title__, __author__, __description__,
+    __copyright__, __credits__, __license__, __email__,
+    __status__, __version__,
+]

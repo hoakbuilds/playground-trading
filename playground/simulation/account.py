@@ -10,7 +10,7 @@ from datetime import datetime as dt
 from playground.simulation.position import (
     OpenedTrade, ClosedTrade, LongPosition, ShortPosition, 
 )
-from playground.pair import MarketPair
+from playground.models.pair import MarketPair
 from playground.util_ops import get_delta_callable_for_tf
 
 

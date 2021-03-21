@@ -1,0 +1,117 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "mode": {
+        "type": "string"
+      },
+      "bridge": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "module_name": {
+            "type": "string"
+          },
+          "flows": {
+            "type": "array",
+            "items": [
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "object",
+                    "properties": {
+                      "module_name": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "module_name",
+                      "name",
+                      "key"
+                    ]
+                  },
+                  "target": {
+                    "type": "object",
+                    "properties": {
+                      "module_name": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "key": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "module_name",
+                      "name",
+                      "key"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "source",
+                  "target"
+                ]
+              }
+            ]
+          },
+          "websocket_ip": {
+            "type": "string"
+          },
+          "websocket_port": {
+            "type": "integer"
+          } 
+        },
+        "required": [
+          "name",
+          "module_name",
+          "flows",
+          "websocket_ip",
+          "websocket_port"
+        ]
+      },
+      "api": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "rest_ip": {
+            "type": "string"
+          },
+          "rest_port": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "rest_ip",
+          "rest_port"
+        ]
+      }
+    },
+    "required": [
+      "name",
+      "mode",
+      "bridge",
+      "api"
+    ]
+  }
